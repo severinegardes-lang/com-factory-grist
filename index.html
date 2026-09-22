@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>COM’ FACTORY</title><script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<style>
+*{box-sizing:border-box}:root{--p:#e6007e;--c:#f23876;--o:#ff8a00;--ink:#402833;--muted:#806873}
+body{margin:0;font-family:Segoe UI,Arial,sans-serif;color:var(--ink);background:linear-gradient(135deg,#fff0f8,#fff1e6 60%,#fff8ed)}
+.app{min-height:100vh;display:grid;grid-template-columns:245px 1fr}aside{padding:28px 18px;background:linear-gradient(165deg,var(--p),var(--c) 52%,var(--o));color:#fff}
+.brand{font-size:25px;font-weight:900;margin:4px 10px 28px}.brand small{display:block;font-size:11px;margin-top:5px;opacity:.85}
+nav button{display:block;width:100%;border:0;background:transparent;color:#fff;text-align:left;padding:13px 14px;border-radius:14px;margin:5px 0;font-weight:700;cursor:pointer}
+nav button:hover,nav button.active{background:#ffffff32}main{padding:34px}.page{display:none}.page.active{display:block}
+.hero,.card,.panel{background:#fffffff0;border:1px solid #ffe3dd;box-shadow:0 14px 40px #7734431f}.hero{background:linear-gradient(115deg,#ffe2f3,#fff0dc);border-radius:26px;padding:29px;position:relative;overflow:hidden}.hero:after{content:"☀";position:absolute;right:28px;top:8px;font-size:95px;opacity:.13}
+.badge{display:inline-block;background:#fff;color:#d90078;border-radius:99px;padding:7px 11px;font-size:11px;font-weight:900}h1{font-size:31px;margin:12px 0 7px}.hero p,.sub,.card p{color:var(--muted);line-height:1.5}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:22px}.card{border-radius:21px;padding:20px}.ico{font-size:28px}.card h3{margin:10px 0 6px}.card p{font-size:13px}
+.action{border:0;border-radius:12px;padding:10px 13px;color:#fff;font-weight:800;background:linear-gradient(90deg,var(--p),var(--o));cursor:pointer}.title{font-size:27px;margin:0}.panel{border-radius:22px;padding:34px;text-align:center;color:var(--muted)}
+@media(max-width:850px){.app{grid-template-columns:1fr}aside{padding:14px}nav{display:flex;overflow:auto}.brand{margin-bottom:12px}nav button{width:auto;white-space:nowrap}.grid{grid-template-columns:1fr}main{padding:20px}}
+</style></head><body><div class="app"><aside><div class="brand">COM’ FACTORY<small>CFA NOA · CFPPA RODEZ</small></div><nav>
+<button class="active" data-page="home">☀️ Accueil</button><button data-page="calendar">🗓️ Calendrier éditorial</button><button data-page="studio">✨ Studio IA</button><button data-page="training">🎓 Formations</button><button data-page="ideas">💡 Idées & contenus</button><button data-page="sources">📚 Sources & documents</button>
+</nav></aside><main>
+<section id="home" class="page active"><div class="hero"><span class="badge">ASSISTANT MARKETING & COMMUNICATION</span><h1>Faites rayonner vos formations ☀️</h1><p>Un espace pour imaginer, planifier et produire une communication attractive pour les jeunes, les parents, les entreprises et vos partenaires.</p></div>
+<div class="grid"><div class="card"><div class="ico">🗓️</div><h3>Calendrier intelligent</h3><p>Une sélection éditoriale équilibrée selon les formations, les dates et les publics.</p><button class="action" onclick="go('calendar')">Voir le calendrier</button></div>
+<div class="card"><div class="ico">✨</div><h3>Studio IA</h3><p>Créer publications, Reels, carrousels, interviews et contenus à fort impact.</p><button class="action" onclick="go('studio')">Créer</button></div>
+<div class="card"><div class="ico">💡</div><h3>Effet Waouh</h3><p>POV, coulisses, mini-séries, défis et formats créatifs.</p><button class="action" onclick="go('ideas')">Trouver une idée</button></div></div></section>
+<section id="calendar" class="page"><h2 class="title">🗓️ Calendrier éditorial</h2><p class="sub">Le cœur de COM’ FACTORY.</p><div class="panel">☀️ Le calendrier collaboratif Grist arrive ici.</div></section>
+<section id="studio" class="page"><h2 class="title">✨ Studio IA</h2><p class="sub">De l’idée au contenu prêt à publier.</p><div class="panel">✨ Connexion IA prévue après la base Grist.</div></section>
+<section id="training" class="page"><h2 class="title">🎓 Formations</h2><p class="sub">Formations longues et courtes.</p><div class="panel">🎓 Le catalogue de la V13 sera intégré ici.</div></section>
+<section id="ideas" class="page"><h2 class="title">💡 Idées & contenus</h2><p class="sub">Efficace · Créatif · Waouh.</p><div class="panel">💡 Bibliothèque marketing.</div></section>
+<section id="sources" class="page"><h2 class="title">📚 Sources & documents</h2><p class="sub">La mémoire de COM’ FACTORY.</p><div class="panel">📚 Base documentaire et nouvelles informations.</div></section>
+</main></div><script>
+try{grist.ready({requiredAccess:'full'})}catch(e){}
+function go(id){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');let b=document.querySelector('[data-page="'+id+'"]');if(b)b.classList.add('active')}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.page));
+</script></body></html>
