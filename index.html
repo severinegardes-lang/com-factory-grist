@@ -43,8 +43,29 @@
 </section>
 
 <section id="studio" class="page">
-<div class="hero"><h2>Studio <span>IA</span> ✨</h2><p>La base Grist est connectée. La génération IA sera branchée ensuite via un service sécurisé : aucune clé OpenAI ne sera placée dans cette page publique.</p></div>
-<div class="grid"><div class="card"><h3>1. Choisir</h3><p class="muted">Formation + cible + objectif.</p></div><div class="card"><h3>2. Créer</h3><p class="muted">Post, Reel, carrousel, email ou campagne.</p></div><div class="card"><h3>3. Affiner</h3><p class="muted">Efficace · Créatif · Waouh.</p></div></div>
+<div class="hero"><h2>Studio <span>IA</span> ✨</h2><p>Construisez une communication à partir de vos vraies formations et adaptez-la à chaque réseau.</p></div>
+<div class="grid" style="grid-template-columns:minmax(320px,.9fr) minmax(420px,1.4fr)">
+<div class="card">
+<h3>🎯 Brief de communication</h3>
+<label>Univers</label><select id="aiUniverse" onchange="fillAiForms()" style="width:100%;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"><option>Formation longue</option><option>Formation courte</option><option>Vie du centre</option><option>Entreprise / partenaire</option><option>Apprenant / témoignage</option></select>
+<label>Formation</label><select id="aiForm" style="width:100%;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"></select>
+<label>Idée / angle</label><select id="aiIdea" style="width:100%;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"></select>
+<label>Public cible</label><select id="aiTarget" style="width:100%;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"><option>Jeunes</option><option>Parents</option><option>Entreprises</option><option>Professionnels</option><option>Prescripteurs / partenaires</option><option>Tous publics</option></select>
+<label>Objectif</label><select id="aiObjective" style="width:100%;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"><option>Faire connaître la formation</option><option>Recruter / générer des candidatures</option><option>Remplir une session</option><option>Attirer de nouveaux abonnés</option><option>Créer de l'engagement</option><option>Valoriser les apprenants</option><option>Valoriser une entreprise / un partenaire</option><option>Montrer l'expertise du centre</option></select>
+<label>Type de contenu</label><select id="aiContentType" style="width:100%;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"><option>Post</option><option>Reel / vidéo courte</option><option>Carrousel</option><option>Interview</option><option>Story</option><option>Photo + texte</option><option>Email / message partenaire</option><option>Campagne multi-formats</option></select>
+<label>Réseaux — plusieurs choix possibles</label>
+<div class="toolbar" style="margin-top:6px"><label><input type="checkbox" class="aiNet" value="Instagram" checked> Instagram</label><label><input type="checkbox" class="aiNet" value="Facebook" checked> Facebook</label><label><input type="checkbox" class="aiNet" value="LinkedIn" checked> LinkedIn</label></div>
+<label>Ton</label><select id="aiTone" style="width:100%;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"><option>Dynamique et humain</option><option>Professionnel</option><option>Accessible et rassurant</option><option>Direct et énergique</option><option>Expert mais simple</option><option>Inspirant</option></select>
+<label>Niveau de créativité</label><select id="aiCreativity" style="width:100%;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"><option>Efficace</option><option selected>Créatif</option><option>Waouh</option></select>
+<label>Informations réelles à intégrer</label><textarea id="aiFacts" placeholder="Ex. activité réalisée aujourd’hui, date, lieu, intervenant, matériel utilisé, témoignage réel…" style="width:100%;min-height:100px;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"></textarea>
+<div class="toolbar"><button class="btn" onclick="prepareAi()">✨ Générer le contenu</button><button class="btn alt" onclick="surpriseAi()">🎲 Surprends-moi</button></div>
+<p class="muted">Le Studio doit s'appuyer sur les données Grist et vos informations réelles : pas de date, entreprise, témoignage, financement ou disponibilité inventés.</p>
+</div>
+<div class="card">
+<h3>✨ Résultat Studio IA</h3>
+<div id="aiResult"><div class="notice">Complétez le brief puis cliquez sur « Générer le contenu ».</div></div>
+</div>
+</div>
 </section>
 
 <section id="formations" class="page"><div class="toolbar"><input id="formSearch" class="search" placeholder="Rechercher une formation…" oninput="renderForms()"><select id="formType" onchange="renderForms()"><option value="">Tous les types</option><option>Longue</option><option>Courte</option><option>VAE</option></select></div><div id="formList" class="list"></div></section>
@@ -78,7 +99,7 @@ function refresh(){
  $('#kForms').textContent=(D.FORMATIONS||[]).filter(x=>x.Actif!==false).length;
  $('#kIdeas').textContent=(D.IDEES||[]).filter(x=>x.Actif!==false).length;
  $('#kMonth').textContent=monthEvents().length;
- renderCalendar();renderForms();renderIdeas();renderSources();
+ renderCalendar();renderForms();renderIdeas();renderSources();fillAiForms();
 }
 function go(id){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===id));document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===id));$('#title').textContent={home:'Accueil',calendar:'Calendrier éditorial',studio:'Studio IA',formations:'Formations',ideas:'Idées & contenus',sources:'Sources & documents'}[id];}
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>go(b.dataset.page));
@@ -145,6 +166,29 @@ async function saveSource(){
  const vals={Titre:$('#sTitle').value,Type:$('#sType').value,Informations:$('#sInfo').value,Origine:'Ajout utilisateur',Actif:true};if(!vals.Titre)return alert('Ajoutez un titre.');
  await grist.docApi.applyUserActions([['AddRecord',T.SOURCES,null,vals]]);D.SOURCES=rows(await grist.docApi.fetchTable(T.SOURCES));closeModal();renderSources();
 }
+
+function fillAiForms(){
+ const u=$('#aiUniverse')?.value||'Formation longue';
+ let fs=(D.FORMATIONS||[]).filter(x=>x.Actif!==false);
+ if(u==='Formation longue')fs=fs.filter(x=>x.Type==='Longue'||x.Type==='VAE');
+ else if(u==='Formation courte')fs=fs.filter(x=>x.Type==='Courte');
+ const f=$('#aiForm');if(f)f.innerHTML=(u==='Vie du centre'||u==='Entreprise / partenaire'||u==='Apprenant / témoignage'?'<option>Communication transversale</option>':'')+fs.map(x=>`<option>${esc(x.Intitule)}</option>`).join('');
+ const ideas=$('#aiIdea');if(ideas)ideas.innerHTML=(D.IDEES||[]).filter(x=>x.Actif!==false).map(x=>`<option>${esc(x.Concept)}</option>`).join('');
+}
+function surpriseAi(){
+ const ideas=(D.IDEES||[]).filter(x=>x.Actif!==false);if(ideas.length){const x=ideas[Math.floor(Math.random()*ideas.length)];$('#aiIdea').value=x.Concept;if(x.Public)$('#aiTarget').value=x.Public;if(x.Creativite)$('#aiCreativity').value=x.Creativite;}
+ const types=['Reel / vidéo courte','Carrousel','Interview','Story','Photo + texte'];$('#aiContentType').value=types[Math.floor(Math.random()*types.length)];
+}
+function prepareAi(){
+ const nets=[...document.querySelectorAll('.aiNet:checked')].map(x=>x.value);
+ if(!nets.length)return alert('Choisissez au moins un réseau.');
+ const form=$('#aiForm').value||'Communication du centre', idea=$('#aiIdea').value||'', target=$('#aiTarget').value, obj=$('#aiObjective').value, typ=$('#aiContentType').value, tone=$('#aiTone').value, creative=$('#aiCreativity').value, facts=$('#aiFacts').value.trim();
+ const training=(D.FORMATIONS||[]).find(x=>x.Intitule===form)||{};
+ const baseFacts=[training.Categorie,training.Niveau,training.Duree,training.Dates_sessions].filter(Boolean).join(' · ');
+ const networkCards=nets.map(n=>`<div class="row"><span class="tag">${esc(n)}</span><h3>${esc(typ)} · ${esc(form)}</h3><p><b>Angle :</b> ${esc(idea)}</p><p><b>Cible :</b> ${esc(target)} · <b>Objectif :</b> ${esc(obj)}</p><p class="muted">${esc(baseFacts)}</p><div class="notice"><b>Texte IA à générer pour ${esc(n)}</b><br>Ton : ${esc(tone)} · Créativité : ${esc(creative)}${facts?'<br>Informations réelles : '+esc(facts):''}</div><p><b># Hashtags :</b> sélection spécifique à ${esc(n)}, à la formation, au territoire, au métier et au public — sans liste générique répétée.</p></div>`).join('');
+ $('#aiResult').innerHTML=`<div class="notice ok">✓ Brief complet préparé à partir de Grist. La prochaine connexion sécurisée à OpenAI transformera ces briefs en textes finis sans exposer votre clé API.</div>${networkCards}`;
+}
+
 function closeModal(){$('#modal').classList.remove('show')}
 init();
 </script></body></html>
