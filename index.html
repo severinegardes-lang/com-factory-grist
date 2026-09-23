@@ -61,6 +61,15 @@
 <div class="toolbar"><button class="btn" onclick="prepareAi()">✨ Générer le contenu</button><button class="btn alt" onclick="surpriseAi()">🎲 Surprends-moi</button></div>
 <p class="muted">Le Studio doit s'appuyer sur les données Grist et vos informations réelles : pas de date, entreprise, témoignage, financement ou disponibilité inventés.</p>
 </div>
+<div class="card" id="aiConnectionCard">
+<h3>🔐 Connexion IA</h3>
+<p class="muted">À renseigner une seule fois avec l’adresse sécurisée du moteur COM’ FACTORY.</p>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<input id="aiBackendUrl" placeholder="https://votre-moteur.workers.dev" style="flex:1;min-width:280px;padding:10px;border:1px solid var(--line);border-radius:10px">
+<button class="btn alt" onclick="saveAiBackend()">Enregistrer</button>
+</div>
+<div id="aiConnectionStatus" class="muted" style="margin-top:8px"></div>
+</div>
 <div class="card">
 <h3>✨ Résultat Studio IA</h3>
 <div id="aiResult"><div class="notice">Complétez le brief puis cliquez sur « Générer le contenu ».</div></div>
@@ -179,16 +188,52 @@ function surpriseAi(){
  const ideas=(D.IDEES||[]).filter(x=>x.Actif!==false);if(ideas.length){const x=ideas[Math.floor(Math.random()*ideas.length)];$('#aiIdea').value=x.Concept;if(x.Public)$('#aiTarget').value=x.Public;if(x.Creativite)$('#aiCreativity').value=x.Creativite;}
  const types=['Reel / vidéo courte','Carrousel','Interview','Story','Photo + texte'];$('#aiContentType').value=types[Math.floor(Math.random()*types.length)];
 }
-function prepareAi(){
+function saveAiBackend(){
+ const v=($('#aiBackendUrl')?.value||'').trim().replace(/\/+$/,'');
+ if(!v)return alert("Collez l’adresse du moteur IA.");
+ localStorage.setItem('comfactory_ai_backend',v);
+ $('#aiConnectionStatus').textContent='✓ Moteur IA enregistré sur cet ordinateur.';
+}
+function initAiBackend(){
+ const v=localStorage.getItem('comfactory_ai_backend')||'';
+ const el=$('#aiBackendUrl'); if(el)el.value=v;
+ const s=$('#aiConnectionStatus'); if(s)s.textContent=v?'✓ Moteur IA configuré.':'Moteur IA à connecter.';
+}
+function renderAiResult(data){
+ const nets=(data.networks||[]).map(n=>{
+   const tags=(n.hashtags||[]).join(' ');
+   return `<div class="row" style="margin-top:14px">
+     <span class="tag">${esc(n.network||'Réseau')}</span>
+     <h3>${esc(n.hook||'')}</h3>
+     <div style="white-space:pre-wrap;line-height:1.55">${esc(n.copy||'')}</div>
+     ${n.cta?`<p><b>CTA :</b> ${esc(n.cta)}</p>`:''}
+     ${n.visual?`<p><b>Visuel / tournage :</b> ${esc(n.visual)}</p>`:''}
+     ${n.production?`<div class="notice"><b>Réalisation</b><br><span style="white-space:pre-wrap">${esc(n.production)}</span></div>`:''}
+     ${tags?`<p><b># Hashtags recommandés :</b><br>${esc(tags)}</p>`:''}
+   </div>`;
+ }).join('');
+ $('#aiResult').innerHTML=`${data.strategy?`<div class="notice ok"><b>Angle marketing retenu</b><br>${esc(data.strategy)}</div>`:''}${nets}${data.cross_network_tip?`<div class="notice"><b>Conseil multi-réseaux</b><br>${esc(data.cross_network_tip)}</div>`:''}`;
+}
+async function prepareAi(){
  const nets=[...document.querySelectorAll('.aiNet:checked')].map(x=>x.value);
  if(!nets.length)return alert('Choisissez au moins un réseau.');
- const form=$('#aiForm').value||'Communication du centre', idea=$('#aiIdea').value||'', target=$('#aiTarget').value, obj=$('#aiObjective').value, typ=$('#aiContentType').value, tone=$('#aiTone').value, creative=$('#aiCreativity').value, facts=$('#aiFacts').value.trim();
+ const backend=(localStorage.getItem('comfactory_ai_backend')||'').replace(/\/+$/,'');
+ if(!backend){$('#aiResult').innerHTML='<div class="notice">🔐 Renseignez d’abord l’adresse du moteur IA dans « Connexion IA ».</div>';return;}
+ const form=$('#aiForm').value||'Communication du centre', idea=$('#aiIdea').value||'', target=$('#aiTarget').value, obj=$('#aiObjective').value, typ=$('#aiContentType').value, tone=$('#aiTone').value, creative=$('#aiCreativity').value, facts=$('#aiFacts').value.trim(), universe=$('#aiUniverse').value;
  const training=(D.FORMATIONS||[]).find(x=>x.Intitule===form)||{};
- const baseFacts=[training.Categorie,training.Niveau,training.Duree,training.Dates_sessions].filter(Boolean).join(' · ');
- const networkCards=nets.map(n=>`<div class="row"><span class="tag">${esc(n)}</span><h3>${esc(typ)} · ${esc(form)}</h3><p><b>Angle :</b> ${esc(idea)}</p><p><b>Cible :</b> ${esc(target)} · <b>Objectif :</b> ${esc(obj)}</p><p class="muted">${esc(baseFacts)}</p><div class="notice"><b>Texte IA à générer pour ${esc(n)}</b><br>Ton : ${esc(tone)} · Créativité : ${esc(creative)}${facts?'<br>Informations réelles : '+esc(facts):''}</div><p><b># Hashtags :</b> sélection spécifique à ${esc(n)}, à la formation, au territoire, au métier et au public — sans liste générique répétée.</p></div>`).join('');
- $('#aiResult').innerHTML=`<div class="notice ok">✓ Brief complet préparé à partir de Grist. La prochaine connexion sécurisée à OpenAI transformera ces briefs en textes finis sans exposer votre clé API.</div>${networkCards}`;
+ const knowledge=(D.SOURCES||[]).filter(x=>x.Actif!==false).slice(0,12).map(x=>({titre:x.Titre,type:x.Type,informations:x.Informations}));
+ $('#aiResult').innerHTML='<div class="notice">✨ COM’ FACTORY travaille votre contenu…</div>';
+ try{
+   const r=await fetch(backend+'/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+     universe,formation:form,training,idea,target,objective:obj,contentType:typ,networks:nets,tone,creativity:creative,facts,knowledge
+   })});
+   const raw=await r.text(); let data={}; try{data=JSON.parse(raw)}catch{}
+   if(!r.ok)throw new Error(data.error||raw||'Erreur du moteur IA');
+   renderAiResult(data);
+ }catch(e){
+   $('#aiResult').innerHTML=`<div class="notice" style="border-color:#f3a3a3"><b>Connexion IA impossible.</b><br>${esc(e.message||String(e))}</div>`;
+ }
 }
-
 function closeModal(){$('#modal').classList.remove('show')}
-init();
+init(); setTimeout(initAiBackend,300);
 </script></body></html>
