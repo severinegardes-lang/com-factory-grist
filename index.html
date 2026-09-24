@@ -56,22 +56,16 @@
 <label>Réseaux — plusieurs choix possibles</label>
 <div class="toolbar" style="margin-top:6px"><label><input type="checkbox" class="aiNet" value="Instagram" checked> Instagram</label><label><input type="checkbox" class="aiNet" value="Facebook" checked> Facebook</label><label><input type="checkbox" class="aiNet" value="LinkedIn" checked> LinkedIn</label></div>
 <label>Ton</label><select id="aiTone" style="width:100%;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"><option>Dynamique et humain</option><option>Professionnel</option><option>Accessible et rassurant</option><option>Direct et énergique</option><option>Expert mais simple</option><option>Inspirant</option></select>
-<label>Niveau de créativité</label><select id="aiCreativity" style="width:100%;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"><option>Efficace</option><option selected>Créatif</option><option>Waouh</option></select>
+<label>Niveau de créativité</label><select id="aiCreativity" onchange="updateMechanismHint()" style="width:100%;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"><option>Efficace</option><option selected>Créatif</option><option>Waouh</option></select>
+<label>Mécanique marketing</label><select id="aiMechanism" style="width:100%;margin:5px 0 6px;padding:10px;border:1px solid var(--line);border-radius:10px"><option value="AUTO">✨ Choisie intelligemment par COM’ FACTORY</option><option>Geste mystère</option><option>3 secondes pour choisir</option><option>Vrai / Faux</option><option>Repérez le détail</option><option>Idée reçue / réalité</option><option>Choix A / B</option><option>Que feriez-vous ?</option><option>3 indices / 1 réponse</option><option>Révélation progressive</option><option>Mini-série</option></select>
+<p id="mechanismHint" class="muted" style="margin-top:0">COM’ FACTORY choisit la mécanique selon la formation, la cible, le format et l’historique.</p>
 <label>Informations réelles à intégrer</label><textarea id="aiFacts" placeholder="Ex. activité réalisée aujourd’hui, date, lieu, intervenant, matériel utilisé, témoignage réel…" style="width:100%;min-height:100px;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"></textarea>
 <div class="toolbar"><button class="btn" onclick="prepareAi()">✨ Générer le contenu</button><button class="btn alt" onclick="surpriseAi()">🎲 Surprends-moi</button></div>
 <p class="muted">Le Studio doit s'appuyer sur les données Grist et vos informations réelles : pas de date, entreprise, témoignage, financement ou disponibilité inventés.</p>
 </div>
-<div class="card" id="aiConnectionCard">
-<h3>🔐 Connexion IA</h3>
-<p class="muted">À renseigner une seule fois avec l’adresse sécurisée du moteur COM’ FACTORY.</p>
-<div style="display:flex;gap:8px;flex-wrap:wrap">
-<input id="aiBackendUrl" placeholder="https://votre-moteur.workers.dev" style="flex:1;min-width:280px;padding:10px;border:1px solid var(--line);border-radius:10px">
-<button class="btn alt" onclick="saveAiBackend()">Enregistrer</button>
-</div>
-<div id="aiConnectionStatus" class="muted" style="margin-top:8px"></div>
 </div>
 <div class="card">
-<h3>✨ Résultat Studio IA</h3>
+<h3>✨ Proposition COM’ FACTORY</h3>
 <div id="aiResult"><div class="notice">Complétez le brief puis cliquez sur « Générer le contenu ».</div></div>
 </div>
 </div>
@@ -119,7 +113,7 @@ function renderCalendar(){
  const y=viewDate.getFullYear(),m=viewDate.getMonth(),first=(new Date(y,m,1).getDay()+6)%7,days=new Date(y,m+1,0).getDate();
  $('#monthLabel').textContent=new Intl.DateTimeFormat('fr-FR',{month:'long',year:'numeric'}).format(viewDate);
  for(let i=0;i<first;i++)h+='<div class="day off"></div>';
- for(let d=1;d<=days;d++){const ev=monthEvents().filter(x=>dateVal(x.Date_publication)?.getDate()===d);h+=`<div class="day"><div class="num">${d}</div>${ev.map(x=>`<div class="event">${x.Signature?'⭐ ':''}<b>${esc(x.Titre)}</b>${esc(x.Public_cible||'')} · ${esc(x.Format||'')}</div>`).join('')}</div>`}
+ for(let d=1;d<=days;d++){const ev=monthEvents().filter(x=>dateVal(x.Date_publication)?.getDate()===d);h+=`<div class="day"><div class="num">${d}</div>${ev.map(x=>`<div class="event" style="cursor:pointer" onclick="openCalendarInStudioById('${esc(String(x.id||x.id_||''))}')">${x.Signature?'⭐ ':''}<b>${esc(x.Titre)}</b>${esc(x.Public_cible||'')} · ${esc(x.Format||'')}</div>`).join('')}</div>`}
  $('#cal').innerHTML=h;$('#kMonth').textContent=monthEvents().length;
 }
 function shiftMonth(n){viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()+n,1);renderCalendar()}
@@ -228,68 +222,92 @@ function initAiBackend(){
  const el=$('#aiBackendUrl'); if(el)el.value=v;
  const s=$('#aiConnectionStatus'); if(s)s.textContent=v?'✓ Moteur IA configuré.':'Moteur IA à connecter.';
 }
+const MECHANICS={
+ "Geste mystère":{interaction:"deviner",structure:"indice → deuxième indice → révélation → information/compétence documentée → question finale"},
+ "3 secondes pour choisir":{interaction:"choisir",structure:"question immédiate → choix A/B → courte tension → réponse/explication documentée → réaction"},
+ "Vrai / Faux":{interaction:"répondre",structure:"affirmation → vote vrai/faux → révélation → explication factuelle → question"},
+ "Repérez le détail":{interaction:"repérer",structure:"visuel serré → consigne → indice → révélation → explication"},
+ "Idée reçue / réalité":{interaction:"comparer",structure:"idée reçue → suspense → réalité documentée → explication → réaction"},
+ "Choix A / B":{interaction:"choisir",structure:"situation → A/B → pause → réponse documentée ou éléments à vérifier → question"},
+ "Que feriez-vous ?":{interaction:"se projeter",structure:"situation factuelle ou générique non présentée comme réelle → choix → explication → question"},
+ "3 indices / 1 réponse":{interaction:"deviner",structure:"indice 1 → indice 2 → indice 3 → réponse → explication"},
+ "Révélation progressive":{interaction:"rester jusqu'à la révélation",structure:"détail → indice → contexte → révélation → message clé"},
+ "Mini-série":{interaction:"suivre",structure:"épisode court → promesse éditoriale → fait du jour → ouverture vers prochain épisode"}
+};
+function chooseMechanism(){
+ const level=$('#aiCreativity')?.value||'Créatif';
+ if(level==='Efficace')return 'Information utile';
+ const form=$('#aiForm')?.value||'', rec=(D.FORMATIONS||[]).find(x=>formTitle(x)===form)||{};
+ const type=String(field(rec,'Type','Categorie')||'').toLowerCase(), objective=($('#aiObjective')?.value||'').toLowerCase();
+ let pool;
+ if(type.includes('courte')||objective.includes('remplir')) pool=['Vrai / Faux','Repérez le détail','Que feriez-vous ?','3 indices / 1 réponse'];
+ else if(type.includes('licence')||/licence/i.test(form)) pool=['Choix A / B','Idée reçue / réalité','Que feriez-vous ?','3 indices / 1 réponse'];
+ else pool=['Geste mystère','3 secondes pour choisir','Repérez le détail','Idée reçue / réalité','Révélation progressive','3 indices / 1 réponse'];
+ const recent=(D.CALENDRIER||[]).slice(-8).map(x=>String(field(x,'Angle_marketing','Titre')||'').toLowerCase());
+ return pool.find(m=>!recent.some(r=>r.includes(m.toLowerCase())))||pool[Math.floor(Math.random()*pool.length)];
+}
+function updateMechanismHint(){
+ const level=$('#aiCreativity')?.value||'Créatif', el=$('#mechanismHint'); if(!el)return;
+ el.textContent=level==='Waouh'?'Mode Waouh : une mécanique interactive forte est obligatoire ; une vidéo institutionnelle classique est refusée.':'COM’ FACTORY choisit la mécanique selon la formation, la cible, le format et l’historique.';
+}
 function renderAiResult(data){
- const networkItems = Array.isArray(data.outputs) ? data.outputs : (Array.isArray(data.networks) ? data.networks : (data.networks && typeof data.networks==='object' ? Object.entries(data.networks).map(([network,v])=>({network,...(v||{})})) : []));
+ const networkItems=Array.isArray(data.outputs)?data.outputs:(data.networks&&typeof data.networks==='object'?Object.entries(data.networks).map(([network,v])=>({network,...(v||{})})):[]);
+ const concept=data.concept||data.mechanism||'';
  const nets=networkItems.map(n=>{
    const tags=(n.hashtags||[]).join(' ');
+   const copy=[n.hook,n.copy].filter(Boolean).join('\n\n');
    return `<div class="row" style="margin-top:14px">
      <span class="tag">${esc(n.network||'Réseau')}</span>
-     <h3>${esc(n.hook||'')}</h3>
-     <div style="white-space:pre-wrap;line-height:1.55">${esc(n.copy||'')}</div>
-     ${n.cta?`<p><b>CTA :</b> ${esc(n.cta)}</p>`:''}
-     ${n.visual?`<p><b>Visuel / tournage :</b> ${esc(n.visual)}</p>`:''}
-     ${n.production?`<div class="notice"><b>Réalisation</b><br><span style="white-space:pre-wrap">${esc(n.production)}</span></div>`:''}
-     ${tags?`<p><b># Hashtags recommandés :</b><br>${esc(tags)}</p>`:''}
+     <div style="white-space:pre-wrap;line-height:1.6;font-size:1.02rem">${esc(copy)}</div>
+     ${n.visual?`<p><b>🎬 À filmer / créer</b><br>${esc(n.visual)}</p>`:''}
+     ${n.production?`<div class="notice"><b>🎥 Réalisation</b><br><span style="white-space:pre-wrap">${esc(n.production)}</span></div>`:''}
+     ${n.preparation?`<div class="notice"><b>📌 À préparer avant</b><br>${esc(n.preparation)}</div>`:''}
+     ${tags?`<p><b># Hashtags</b><br>${esc(tags)}</p>`:''}
    </div>`;
  }).join('');
- $('#aiResult').innerHTML=`${data.strategy?`<div class="notice ok"><b>Angle marketing retenu</b><br>${esc(data.strategy)}</div>`:''}${nets}${(data.crossNetworkTip||data.cross_network_tip)?`<div class="notice"><b>Conseil multi-réseaux</b><br>${esc(data.crossNetworkTip||data.cross_network_tip)}</div>`:''}`;
+ $('#aiResult').innerHTML=`${concept?`<div class="notice ok"><b>💡 Concept</b><br>${esc(concept)}</div>`:''}${data.strategy?`<div class="muted" style="margin:8px 0 12px">${esc(data.strategy)}</div>`:''}${nets}${(data.crossNetworkTip||data.cross_network_tip)?`<div class="notice"><b>🔄 Adaptation multi-réseaux</b><br>${esc(data.crossNetworkTip||data.cross_network_tip)}</div>`:''}`;
 }
 async function prepareAi(){
- const nets=[...document.querySelectorAll('.aiNet:checked')].map(x=>x.value);
- if(!nets.length)return alert('Choisissez au moins un réseau.');
- const backend=(localStorage.getItem('comfactory_ai_backend')||'').replace(/\/+$/,'');
- if(!backend){$('#aiResult').innerHTML='<div class="notice">🔐 Renseignez d’abord l’adresse du moteur IA dans « Connexion IA ».</div>';return;}
+ const nets=[...document.querySelectorAll('.aiNet:checked')].map(x=>x.value); if(!nets.length)return alert('Choisissez au moins un réseau.');
+ const backend=(localStorage.getItem('comfactory_ai_backend')||'').replace(/\/+$/,''); if(!backend){$('#aiResult').innerHTML='<div class="notice">Le moteur IA COM’ FACTORY n’est pas configuré sur cet ordinateur.</div>';return;}
  const form=$('#aiForm').value||'Communication du centre', idea=$('#aiIdea').value||'', target=$('#aiTarget').value, obj=$('#aiObjective').value, typ=$('#aiContentType').value, tone=$('#aiTone').value, creative=$('#aiCreativity').value, facts=$('#aiFacts').value.trim(), universe=$('#aiUniverse').value;
- const training=(D.FORMATIONS||[]).find(x=>formTitle(x)===form)||{};
- const ideaRecord=(D.IDEES||[]).find(x=>ideaTitle(x)===idea)||{};
+ const training=(D.FORMATIONS||[]).find(x=>formTitle(x)===form)||{}, ideaRecord=(D.IDEES||[]).find(x=>ideaTitle(x)===idea)||{};
  const knowledge=(D.SOURCES||[]).filter(x=>isActive(x)).slice(0,12).map(x=>({titre:field(x,'Titre'),type:field(x,'Type'),informations:field(x,'Informations','Information','Contenu')}));
- const creativeDirection={
-   role:"Tu es le directeur créatif social media de COM' FACTORY. Tu transformes les informations réelles du CFA NOA / CFPPA Rodez - La Roque en contenus qui donnent envie de regarder, commenter, enregistrer ou partager, sans jamais inventer un fait.",
-   priority:"QUALITE AVANT QUANTITE. Le résultat doit être nettement plus créatif qu'un post institutionnel classique et directement exploitable par l'équipe communication.",
-   antiGeneric:[
-     "Interdit de commencer par Découvrez, Saviez-vous, Nous formons les professionnels de demain ou Bienvenue dans notre formation.",
-     "Interdit d'écrire Inscrivez-vous maintenant sauf si une date ou une ouverture d'inscription est explicitement fournie.",
-     "Ne jamais inventer un élève, une équipe, un témoignage, un chiffre, une durée, une date, un partenaire, un résultat, une scène ou une organisation non présents dans les données.",
-     "Si une information manque, construire le concept autour de ce qui peut réellement être filmé ou montré, sans prétendre que cela existe déjà."
-   ],
-   hooks:"Première ligne courte et intrigante. Chercher une tension, une surprise, une question concrète, un détail métier ou une immersion. L'accroche doit donner envie de voir la suite en moins de 3 secondes.",
-   creativity:{
-     Efficace:"simple, précis, vivant, immédiatement compréhensible",
-     Créatif:"angle éditorial distinctif, narration, rythme, formulation mémorable",
-     Waouh:"concept signature réellement surprenant mais crédible : POV, défi, mini-série, avant/après, vrai/faux, 3 secondes pour choisir, duel de gestes, coulisses, contraste idées reçues/réalité. Ne jamais simuler un événement qui n'a pas eu lieu."
-   },
-   networkRules:{
-     Instagram:"rythme visuel, hook très court, phrases aérées, interaction naturelle, Reel/carrousel pensé pour rétention et partage",
-     Facebook:"plus humain et narratif, ancrage concret, parents/jeunes/territoire, question finale naturelle",
-     LinkedIn:"professionnel sans jargon, compétences, pédagogie, alternance, expertise, entreprises et valeur concrète"
-   },
-   production:"Pour Reel/vidéo, fournir un mini storyboard exploitable plan par plan avec durée indicative, ce qu'on filme, texte écran ou voix off et plan final. Pour carrousel, donner couverture + contenu de chaque slide. Pour photo, préciser la photo à prendre.",
-   hashtags:"Hashtags propres au réseau et au sujet : métier/compétence + formation + apprentissage/formation pro + territoire si pertinent + cible. 5 à 9 maximum. Aucun caractère ':' ou espace dans un hashtag, aucun hashtag générique artificiel, aucune promesse de portée.",
-   cta:"CTA naturel et adapté à l'objectif : se projeter, commenter, enregistrer, partager, demander des informations ou découvrir la formation. Pas de pression commerciale.",
-   outputGoal:"Chaque réseau doit recevoir une vraie réécriture, pas le même texte recopié. Utiliser uniquement training, idea, facts et knowledge comme base factuelle."
+ let mechanism=$('#aiMechanism').value; if(mechanism==='AUTO')mechanism=chooseMechanism();
+ const mechanic=MECHANICS[mechanism]||{interaction:'informer',structure:'accroche → information factuelle → explication → fin naturelle'};
+ const strategy={
+   principle:"COM’ FACTORY décide de la stratégie ; l’IA rédige dans le cadre imposé.",mechanism,interaction:mechanic.interaction,structure:mechanic.structure,
+   factualRule:"training, facts et knowledge sont la seule base factuelle. Tout élément concret absent doit être formulé comme quelque chose à choisir ou vérifier sur place, jamais comme un fait.",
+   forbiddenFacts:["outil/machine/animal/végétal non documenté","horaire inventé","durée de tournage inventée","taille d'équipe inventée","témoignage/chiffre/résultat inventé","débutant → expert ou promesse équivalente"],
+   noCTAField:"Ne retourne aucun champ CTA. Une invitation à réagir ou contacter, si pertinente, doit être intégrée naturellement à la fin du texte.",
+   emojiRule:"Instagram/Facebook vivants mais lisibles ; LinkedIn sobre. Emojis factuels uniquement si l'élément est documenté. Emojis fonctionnels 👀 🤔 ❓ 🎯 💡 👉 📩 🎓 📍 autorisés quand pertinents.",
+   networkRule:"Rédiger une vraie version différente pour chaque réseau demandé, jamais un copier-coller.",
+   productionRule:"Pour Reel/vidéo : 5 à 7 plans. Pour carrousel : couverture + slides. Ne jamais inventer durée globale, équipe ou matériel. Si un élément terrain manque, écrire explicitement ce que l'équipe doit choisir avec le formateur.",
+   hashtagRule:"5 à 8 hashtags maximum, naturels et ciblés : diplôme/formation + secteur/métier + apprentissage/formation pro + territoire si pertinent + sujet précis. Éviter #Motivation #Inspiration #Education #FormationLongue.",
+   waouhRule:creative==='Waouh'?"La mécanique imposée doit être visible dans le résultat. Refuser mentalement toute structure apprenti → activité → formateur → logo et tout contenu interchangeable avec une autre formation.":""
  };
- $('#aiResult').innerHTML='<div class="notice">✨ COM’ FACTORY travaille votre contenu…</div>';
+ $('#aiResult').innerHTML=`<div class="notice">✨ COM’ FACTORY construit la stratégie « ${esc(mechanism)} » puis rédige les versions par réseau…</div>`;
  try{
-   const r=await fetch(backend+'/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-     universe,formation:form,training,idea:ideaRecord,ideaLabel:idea,target,objective:obj,contentType:typ,networks:nets,tone,creativity:creative,facts,knowledge,creativeDirection
-   })});
-   const raw=await r.text(); let data={}; try{data=JSON.parse(raw)}catch{}
-   if(!r.ok)throw new Error(data.error||raw||'Erreur du moteur IA');
-   renderAiResult(data);
- }catch(e){
-   $('#aiResult').innerHTML=`<div class="notice" style="border-color:#f3a3a3"><b>Connexion IA impossible.</b><br>${esc(e.message||String(e))}</div>`;
- }
+   const r=await fetch(backend+'/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({universe,formation:form,training,idea:ideaRecord,ideaLabel:idea,target,objective:obj,contentType:typ,networks:nets,tone,creativity:creative,facts,knowledge,mechanism,strategy})});
+   const raw=await r.text(); let data={}; try{data=JSON.parse(raw)}catch{}; if(!r.ok)throw new Error(data.error||data.details||raw||'Erreur du moteur IA');
+   if(!data.concept)data.concept=mechanism; renderAiResult(data);
+ }catch(e){$('#aiResult').innerHTML=`<div class="notice" style="border-color:#f3a3a3"><b>Génération impossible.</b><br>${esc(e.message||String(e))}</div>`;}
 }
+function surpriseAi(){
+ const ideas=(D.IDEES||[]).filter(x=>isActive(x)&&ideaTitle(x)); if(ideas.length){const x=ideas[Math.floor(Math.random()*ideas.length)];$('#aiIdea').value=ideaTitle(x);const pub=field(x,'Public','Public_cible','Cible');if(pub)$('#aiTarget').value=pub;}
+ const types=['Reel / vidéo courte','Carrousel','Interview','Story','Photo + texte']; $('#aiContentType').value=types[Math.floor(Math.random()*types.length)]; $('#aiCreativity').value='Waouh'; $('#aiMechanism').value='AUTO'; updateMechanismHint();
+}
+function openCalendarInStudioById(id){
+ const ev=(D.CALENDRIER||[]).find(x=>String(x.id||x.id_||'')===String(id)); if(!ev)return;
+ go('studio');
+ const form=field(ev,'Formation'); if(form){const rec=(D.FORMATIONS||[]).find(x=>formTitle(x)===form); if(rec){const t=String(field(rec,'Type')||'').toLowerCase(); $('#aiUniverse').value=t.includes('courte')?'Formation courte':'Formation longue'; fillAiForms(); $('#aiForm').value=form;}}
+ const pub=field(ev,'Public_cible','Public'); if(pub)$('#aiTarget').value=pub;
+ const fmt=String(field(ev,'Format')||''); const match=[...$('#aiContentType').options].find(o=>o.text.toLowerCase().includes(fmt.toLowerCase())||fmt.toLowerCase().includes(o.text.toLowerCase())); if(match)$('#aiContentType').value=match.value;
+ const obj=field(ev,'Objectif'); if(obj){const om=[...$('#aiObjective').options].find(o=>obj.toLowerCase().includes(o.text.toLowerCase())||o.text.toLowerCase().includes(obj.toLowerCase())); if(om)$('#aiObjective').value=om.value;}
+ $('#aiFacts').value=[field(ev,'Pourquoi_maintenant'),field(ev,'A_prevoir')].filter(Boolean).join('\n'); $('#aiMechanism').value='AUTO';
+}
+function saveAiBackend(){const v=($('#aiBackendUrl')?.value||'').trim().replace(/\/+$/,'');if(v)localStorage.setItem('comfactory_ai_backend',v)}
+function initAiBackend(){}
 function closeModal(){$('#modal').classList.remove('show')}
-init(); setTimeout(initAiBackend,300);
+init(); setTimeout(()=>{initAiBackend();updateMechanismHint();},300);
 </script></body></html>
