@@ -56,10 +56,10 @@
 <label>Réseaux — plusieurs choix possibles</label>
 <div class="toolbar" style="margin-top:6px"><label><input type="checkbox" class="aiNet" value="Instagram" checked> Instagram</label><label><input type="checkbox" class="aiNet" value="Facebook" checked> Facebook</label><label><input type="checkbox" class="aiNet" value="LinkedIn" checked> LinkedIn</label></div>
 <label>Ton</label><select id="aiTone" style="width:100%;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"><option>Dynamique et humain</option><option>Professionnel</option><option>Accessible et rassurant</option><option>Direct et énergique</option><option>Expert mais simple</option><option>Inspirant</option></select>
-<label>Niveau de créativité</label><select id="aiCreativity" onchange="updateMechanismHint()" style="width:100%;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"><option>Efficace</option><option selected>Créatif</option><option>Waouh</option></select>
-<label>Mécanique marketing</label><select id="aiMechanism" style="width:100%;margin:5px 0 6px;padding:10px;border:1px solid var(--line);border-radius:10px"><option value="AUTO">✨ Choisie intelligemment par COM’ FACTORY</option><option>Geste mystère</option><option>3 secondes pour choisir</option><option>Vrai / Faux</option><option>Repérez le détail</option><option>Idée reçue / réalité</option><option>Choix A / B</option><option>Que feriez-vous ?</option><option>3 indices / 1 réponse</option><option>Révélation progressive</option><option>Mini-série</option></select>
-<p id="mechanismHint" class="muted" style="margin-top:0">COM’ FACTORY choisit la mécanique selon la formation, la cible, le format et l’historique.</p>
-<label>Informations réelles à intégrer</label><textarea id="aiFacts" placeholder="Ex. activité réalisée aujourd’hui, date, lieu, intervenant, matériel utilisé, témoignage réel…" style="width:100%;min-height:100px;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"></textarea>
+<label>Niveau de créativité</label><select id="aiCreativity" style="width:100%;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"><option>Efficace</option><option selected>Créatif</option><option>Waouh</option></select>
+<div class="notice ok" style="margin:6px 0 14px"><b>✍️ Votre actualité = le sujet principal</b><br><span class="muted">Écrivez simplement ce qui s’est passé. COM’ FACTORY transforme vos informations en publication prête à copier-coller et utilise les fiches formation uniquement pour l’enrichir sans inventer.</span></div>
+<label>✍️ Informations à intégrer</label><textarea id="aiFacts" placeholder="Ex. Aujourd’hui les CAPa sont sortis à la ferme de X. Ils ont travaillé sur l’alimentation du troupeau et le pâturage. Mme X est intervenue…" style="width:100%;min-height:125px;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"></textarea>
+<label>📸 Photos / visuels disponibles</label><textarea id="aiMedia" placeholder="Ex. 4 photos : arrivée sur l’exploitation, groupe, activité autour du troupeau, photo finale. Ou : aucune photo." style="width:100%;min-height:85px;margin:5px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px"></textarea>
 <div class="toolbar"><button class="btn" onclick="prepareAi()">✨ Générer le contenu</button><button class="btn alt" onclick="surpriseAi()">🎲 Surprends-moi</button></div>
 <p class="muted">Le Studio doit s'appuyer sur les données Grist et vos informations réelles : pas de date, entreprise, témoignage, financement ou disponibilité inventés.</p>
 </div>
@@ -271,64 +271,41 @@ function updateMechanismHint(){
  el.textContent=level==='Waouh'?'Mode Waouh : une mécanique interactive forte est obligatoire ; une vidéo institutionnelle classique est refusée.':'COM’ FACTORY choisit la mécanique selon la formation, la cible, le format et l’historique.';
 }
 function renderAiResult(data){
- const val=v=>v==null?'':(typeof v==='string'?v:JSON.stringify(v));
- const concept=data.concept||{};
- const strategy=data.strategie||data.strategy||{};
- const publication=data.publication||{};
- const tournage=data.tournage||{};
- const production=data.production||{};
- const hashtags=Array.isArray(data.hashtags)?data.hashtags:[];
- const conceptHtml=typeof concept==='object'
-   ? `<div class="notice ok"><b>💡 Concept — ${esc(concept.nom||concept.mecanique||'')}</b>${concept.mecanique?`<br><span class="tag">${esc(concept.mecanique)}</span>`:''}${concept.promesse?`<p>${esc(concept.promesse)}</p>`:''}</div>`
-   : (concept?`<div class="notice ok"><b>💡 Concept</b><br>${esc(concept)}</div>`:'');
- const strategyHtml=(strategy&&typeof strategy==='object'&&Object.keys(strategy).length)
-   ? `<div class="notice"><b>🎯 Stratégie</b>${strategy.angle?`<p><b>Angle :</b> ${esc(strategy.angle)}</p>`:''}${strategy.public?`<p><b>Public :</b> ${esc(strategy.public)}</p>`:''}${strategy.objectif?`<p><b>Objectif :</b> ${esc(strategy.objectif)}</p>`:''}${strategy.pourquoi_ca_marche?`<p><b>Pourquoi ça marche :</b> ${esc(strategy.pourquoi_ca_marche)}</p>`:''}</div>`
-   : (strategy?`<div class="notice"><b>🎯 Stratégie</b><br>${esc(val(strategy))}</div>`:'');
- const publicationHtml=(publication&&typeof publication==='object'&&Object.keys(publication).length)
-   ? `<div class="row" style="margin-top:14px"><b>📱 Publication</b>${publication.accroche?`<h3>${esc(publication.accroche)}</h3>`:''}${publication.texte?`<div style="white-space:pre-wrap;line-height:1.6;font-size:1.02rem">${esc(publication.texte)}</div>`:''}</div>`:'';
- const plans=Array.isArray(tournage.plans)?tournage.plans:[];
- const plansHtml=plans.map((p,i)=>`<div class="row" style="margin-top:8px"><b>Plan ${esc(p.numero||i+1)}${p.duree?` — ${esc(p.duree)}`:''}</b>${p.visuel?`<p><b>À filmer :</b> ${esc(p.visuel)}</p>`:''}${p.texte_ecran?`<p><b>Texte écran :</b> ${esc(p.texte_ecran)}</p>`:''}${p.voix_off?`<p><b>Voix off :</b> ${esc(p.voix_off)}</p>`:''}</div>`).join('');
- const tournageHtml=(tournage&&typeof tournage==='object'&&Object.keys(tournage).length)
-   ? `<div class="notice" style="margin-top:14px"><b>🎬 Tournage / réalisation</b>${tournage.format?`<p><span class="tag">${esc(tournage.format)}</span></p>`:''}${plansHtml}</div>`:'';
- const prep=Array.isArray(production.a_prevoir)?production.a_prevoir:[];
- const precautions=Array.isArray(production.precautions)?production.precautions:[];
- const productionHtml=(prep.length||precautions.length)
-   ? `<div class="notice"><b>📌 À préparer</b>${prep.length?`<ul>${prep.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}${precautions.length?`<p><b>Précautions :</b></p><ul>${precautions.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}</div>`:'';
- const tagsHtml=hashtags.length?`<p><b># Hashtags</b><br>${hashtags.map(x=>esc(x)).join(' ')}</p>`:'';
- // Compatibilité avec l'ancien format du Worker, au cas où une ancienne réponse serait encore renvoyée.
- const oldItems=Array.isArray(data.outputs)?data.outputs:(data.networks&&typeof data.networks==='object'?Object.entries(data.networks).map(([network,v])=>({network,...(v||{})})):[]);
- const oldHtml=(!publicationHtml&&!tournageHtml&&oldItems.length)?oldItems.map(n=>{const tags=(n.hashtags||[]).join(' '),copy=[n.hook,n.copy].filter(Boolean).join('\n\n');return `<div class="row" style="margin-top:14px"><span class="tag">${esc(n.network||'Réseau')}</span><div style="white-space:pre-wrap;line-height:1.6;font-size:1.02rem">${esc(copy)}</div>${n.visual?`<p><b>🎬 À filmer / créer</b><br>${esc(n.visual)}</p>`:''}${n.production?`<div class="notice"><b>🎥 Réalisation</b><br><span style="white-space:pre-wrap">${esc(n.production)}</span></div>`:''}${n.preparation?`<div class="notice"><b>📌 À préparer avant</b><br>${esc(n.preparation)}</div>`:''}${tags?`<p><b># Hashtags</b><br>${esc(tags)}</p>`:''}</div>`}).join(''):'';
- $('#aiResult').innerHTML=conceptHtml+strategyHtml+publicationHtml+tournageHtml+productionHtml+tagsHtml+oldHtml;
+ const items=Array.isArray(data.outputs)?data.outputs:(Array.isArray(data.posts)?data.posts:(data.networks&&typeof data.networks==='object'?Object.entries(data.networks).map(([network,v])=>({network,...(v||{})})):[]));
+ const fallback=(data.publication&&typeof data.publication==='object')?[{network:data.network||'Publication',copy:[data.publication.accroche,data.publication.texte].filter(Boolean).join('\n\n'),hashtags:data.hashtags||[]}]:[];
+ const posts=(items.length?items:fallback).map(n=>{
+   const network=n.network||n.reseau||'Réseau';
+   const tags=(Array.isArray(n.hashtags)?n.hashtags:[]).join(' ');
+   const copy=n.post||n.copy||n.text||n.texte||[n.hook,n.accroche].filter(Boolean).join('\n\n');
+   const media=n.mediaAdvice||n.photoAdvice||n.photos||n.visual||'';
+   return `<div class="row" style="margin-top:16px;padding:18px;border:1px solid var(--line);border-radius:16px;background:white">
+     <div class="toolbar" style="justify-content:space-between;align-items:center"><span class="tag">${esc(network)}</span><button class="btn alt" type="button" onclick="copyPost(this)">📋 Copier le post</button></div>
+     <div class="readyPost" style="white-space:pre-wrap;line-height:1.7;font-size:1.05rem;margin-top:12px">${esc(copy)}${tags?`\n\n${esc(tags)}`:''}</div>
+     ${media?`<div class="notice" style="margin-top:12px"><b>📸 Conseil photos / visuels</b><br><span style="white-space:pre-wrap">${esc(media)}</span></div>`:''}
+   </div>`;
+ }).join('');
+ $('#aiResult').innerHTML=`<div class="notice ok"><b>✨ Vos publications sont prêtes</b><br>Copiez-collez directement la version du réseau souhaité.</div>${posts||'<div class="notice">Aucune publication reçue du moteur.</div>'}`;
+}
+function copyPost(btn){
+ const el=btn.closest('.row')?.querySelector('.readyPost'); if(!el)return;
+ navigator.clipboard?.writeText(el.innerText).then(()=>{const old=btn.textContent;btn.textContent='✓ Copié';setTimeout(()=>btn.textContent=old,1400)}).catch(()=>{});
 }
 async function prepareAi(){
  const nets=[...document.querySelectorAll('.aiNet:checked')].map(x=>x.value); if(!nets.length)return alert('Choisissez au moins un réseau.');
  const backend=(localStorage.getItem('comfactory_ai_backend')||'').replace(/\/+$/,''); if(!backend){$('#aiResult').innerHTML='<div class="notice">Le moteur IA COM’ FACTORY n’est pas configuré sur cet ordinateur.</div>';return;}
- const form=$('#aiForm').value||'Communication du centre', idea=$('#aiIdea').value||'', target=$('#aiTarget').value, obj=$('#aiObjective').value, typ=$('#aiContentType').value, tone=$('#aiTone').value, creative=$('#aiCreativity').value, facts=$('#aiFacts').value.trim(), universe=$('#aiUniverse').value;
+ const form=$('#aiForm').value||'Communication du centre', idea=$('#aiIdea').value||'', target=$('#aiTarget').value, obj=$('#aiObjective').value, typ=$('#aiContentType').value, tone=$('#aiTone').value, creative=$('#aiCreativity').value, facts=$('#aiFacts').value.trim(), media=$('#aiMedia')?.value.trim()||'', universe=$('#aiUniverse').value;
  const training=(D.FORMATIONS||[]).find(x=>formTitle(x)===form)||{}, trainingDetails=officialTrainingDetails(form,training), ideaRecord=(D.IDEES||[]).find(x=>ideaTitle(x)===idea)||{};
  const knowledge=(D.SOURCES||[]).filter(x=>isActive(x)).slice(0,12).map(x=>({titre:field(x,'Titre'),type:field(x,'Type'),informations:field(x,'Informations','Information','Contenu')}));
- let mechanism=$('#aiMechanism').value; if(mechanism==='AUTO')mechanism=chooseMechanism();
- const mechanic=MECHANICS[mechanism]||{interaction:'informer',structure:'accroche → information factuelle → explication → fin naturelle'};
- const strategy={
-   principle:"COM’ FACTORY décide de la stratégie ; l’IA rédige dans le cadre imposé.",mechanism,interaction:mechanic.interaction,structure:mechanic.structure,
-   factualRule:"training, facts et knowledge sont la seule base factuelle. Tout élément concret absent doit être formulé comme quelque chose à choisir ou vérifier sur place, jamais comme un fait.",
-   forbiddenFacts:["outil/machine/animal/végétal non documenté","horaire inventé","durée de tournage inventée","taille d'équipe inventée","témoignage/chiffre/résultat inventé","débutant → expert ou promesse équivalente"],
-   noCTAField:"Ne retourne aucun champ CTA. Une invitation à réagir ou contacter, si pertinente, doit être intégrée naturellement à la fin du texte.",
-   emojiRule:"Instagram/Facebook vivants mais lisibles ; LinkedIn sobre. Emojis factuels uniquement si l'élément est documenté. Emojis fonctionnels 👀 🤔 ❓ 🎯 💡 👉 📩 🎓 📍 autorisés quand pertinents.",
-   networkRule:"Rédiger une vraie version différente pour chaque réseau demandé, jamais un copier-coller.",
-   productionRule:"Pour Reel/vidéo : 5 à 7 plans. Pour carrousel : couverture + slides. Ne jamais inventer durée globale, équipe ou matériel. Si un élément terrain manque, écrire explicitement ce que l'équipe doit choisir avec le formateur.",
-   hashtagRule:"5 à 8 hashtags maximum, naturels et ciblés : diplôme/formation + secteur/métier + apprentissage/formation pro + territoire si pertinent + sujet précis. Éviter #Motivation #Inspiration #Education #FormationLongue.",
-   waouhRule:creative==='Waouh'?"La mécanique imposée doit être visible dans le résultat. Refuser mentalement toute structure apprenti → activité → formateur → logo et tout contenu interchangeable avec une autre formation.":""
- };
- $('#aiResult').innerHTML=`<div class="notice">✨ COM’ FACTORY construit la stratégie « ${esc(mechanism)} » puis rédige les versions par réseau…</div>`;
+ $('#aiResult').innerHTML='<div class="notice">✨ COM’ FACTORY rédige vos posts prêts à publier…</div>';
  try{
-   const r=await fetch(backend+'/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({universe,formation:form,training,trainingDetails,formationDetails:trainingDetails,idea:ideaRecord,ideaLabel:idea,target,objective:obj,contentType:typ,format:typ,networks:nets,tone,creativity:creative,facts,knowledge,mechanism,strategy})});
+   const r=await fetch(backend+'/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({universe,formation:form,training,trainingDetails,formationDetails:trainingDetails,idea:ideaRecord,ideaLabel:idea,target,objective:obj,contentType:typ,format:typ,networks:nets,tone,creativity:creative,facts,additionalInfo:facts,media,photos:media,knowledge,mode:'ready_to_post'})});
    const raw=await r.text(); let data={}; try{data=JSON.parse(raw)}catch{}; if(!r.ok)throw new Error(data.error||data.details||raw||'Erreur du moteur IA');
-   if(!data.concept)data.concept=mechanism; renderAiResult(data);
+   renderAiResult(data);
  }catch(e){$('#aiResult').innerHTML=`<div class="notice" style="border-color:#f3a3a3"><b>Génération impossible.</b><br>${esc(e.message||String(e))}</div>`;}
 }
 function surpriseAi(){
  const ideas=(D.IDEES||[]).filter(x=>isActive(x)&&ideaTitle(x)); if(ideas.length){const x=ideas[Math.floor(Math.random()*ideas.length)];$('#aiIdea').value=ideaTitle(x);const pub=field(x,'Public','Public_cible','Cible');if(pub)$('#aiTarget').value=pub;}
- const types=['Reel / vidéo courte','Carrousel','Interview','Story','Photo + texte']; $('#aiContentType').value=types[Math.floor(Math.random()*types.length)]; $('#aiCreativity').value='Waouh'; $('#aiMechanism').value='AUTO'; updateMechanismHint();
+ const types=['Photo + texte','Carrousel','Reel / vidéo courte','Story']; $('#aiContentType').value=types[Math.floor(Math.random()*types.length)]; $('#aiCreativity').value='Waouh';
 }
 function openCalendarInStudioById(id){
  const ev=(D.CALENDRIER||[]).find(x=>String(x.id||x.id_||'')===String(id)); if(!ev)return;
