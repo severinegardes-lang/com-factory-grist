@@ -229,7 +229,8 @@ function initAiBackend(){
  const s=$('#aiConnectionStatus'); if(s)s.textContent=v?'✓ Moteur IA configuré.':'Moteur IA à connecter.';
 }
 function renderAiResult(data){
- const nets=(data.networks||[]).map(n=>{
+ const networkItems = Array.isArray(data.outputs) ? data.outputs : (Array.isArray(data.networks) ? data.networks : (data.networks && typeof data.networks==='object' ? Object.entries(data.networks).map(([network,v])=>({network,...(v||{})})) : []));
+ const nets=networkItems.map(n=>{
    const tags=(n.hashtags||[]).join(' ');
    return `<div class="row" style="margin-top:14px">
      <span class="tag">${esc(n.network||'Réseau')}</span>
@@ -241,7 +242,7 @@ function renderAiResult(data){
      ${tags?`<p><b># Hashtags recommandés :</b><br>${esc(tags)}</p>`:''}
    </div>`;
  }).join('');
- $('#aiResult').innerHTML=`${data.strategy?`<div class="notice ok"><b>Angle marketing retenu</b><br>${esc(data.strategy)}</div>`:''}${nets}${data.cross_network_tip?`<div class="notice"><b>Conseil multi-réseaux</b><br>${esc(data.cross_network_tip)}</div>`:''}`;
+ $('#aiResult').innerHTML=`${data.strategy?`<div class="notice ok"><b>Angle marketing retenu</b><br>${esc(data.strategy)}</div>`:''}${nets}${(data.crossNetworkTip||data.cross_network_tip)?`<div class="notice"><b>Conseil multi-réseaux</b><br>${esc(data.crossNetworkTip||data.cross_network_tip)}</div>`:''}`;
 }
 async function prepareAi(){
  const nets=[...document.querySelectorAll('.aiNet:checked')].map(x=>x.value);
