@@ -38,19 +38,6 @@ body{background:radial-gradient(circle at 8% 2%,#fcebf4 0,transparent 25%),radia
 #resourcePlan{overflow:visible!important}
 .cp-suggest-only{margin-top:16px}.cp-suggest-only .cp-suggest-card{max-width:none}
 
-
-.cp-weekagenda{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;margin-top:8px}
-.cp-day{min-width:0;border-radius:13px;padding:8px 6px;background:#fff;border:1px solid #eee4ed;text-align:center;min-height:94px}
-.cp-day.today{background:linear-gradient(145deg,#fff2f6,#f7efff);border-color:#e9cddd}
-.cp-dayname{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#8b8297;font-weight:800}
-.cp-daynum{font-size:18px;font-weight:900;color:#50485f;margin:2px 0 6px}
-.cp-event{width:100%;border:0;border-radius:9px;padding:6px 5px;background:linear-gradient(135deg,#ffd9e4,#eee0ff);color:#51485d;font-size:10px;font-weight:800;line-height:1.25;cursor:pointer;text-align:left;overflow-wrap:anywhere}
-.cp-event + .cp-event{margin-top:5px}
-.cp-event small{display:block;font-size:9px;font-weight:600;color:#756c7f;margin-top:3px}
-.cp-emptyday{font-size:14px;color:#d2c7d1;padding-top:9px}
-@media(max-width:900px){.cp-weekagenda{grid-template-columns:repeat(4,1fr)}}
-@media(max-width:600px){.cp-weekagenda{grid-template-columns:repeat(2,1fr)}}
-
 @media(max-width:1000px){.action-grid,.studio-shell,.plan-grid{grid-template-columns:1fr}.quick-stats{grid-template-columns:1fr}}
 
 
@@ -127,6 +114,21 @@ body{background:
 .cp-actions>*,.cp-today,.cp-metrics,.cp-latest,.cp-drafts{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .cp-social{align-items:center!important;gap:9px!important}.cp-social a{width:auto!important;min-width:42px!important;padding:0 12px!important;border-radius:22px!important;gap:7px!important;font-size:13px!important;color:#49415f!important;display:flex!important}.cp-social a span{font-size:12px;font-weight:800}.cp-social a[data-social="instagram"]{color:#e63a83!important}.cp-social a[data-social="facebook"]{color:#2875db!important}.cp-social a[data-social="linkedin"]{color:#1677b8!important}
 .cp-network-config{margin-top:18px;padding:18px;border:1px solid #f0dfe9;border-radius:20px;background:linear-gradient(135deg,#fff9fc,#fffaf4)}.cp-network-config h3{margin:0 0 6px}.cp-network-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}.cp-network-grid label{font-weight:800;font-size:13px}.cp-network-grid input{width:100%;margin-top:6px;border:1px solid #e9dce8;border-radius:13px;padding:11px 12px;background:#fff}.cp-save-net{margin-top:12px;border:0;border-radius:14px;padding:11px 16px;background:linear-gradient(135deg,#ff4778,#a969dc);color:#fff;font-weight:900;cursor:pointer}@media(max-width:1050px){.cp-network-grid{grid-template-columns:1fr}.cp-social a span{display:none}.cp-social a{padding:0!important;width:42px!important;justify-content:center}}
+
+/* V30 — mini calendrier actionnable sur l'accueil */
+.cp-week-strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;margin-top:10px}
+.cp-week-day{min-width:0;min-height:112px;padding:8px 6px;border:1px solid #eee3ec;border-radius:14px;background:rgba(255,255,255,.78)}
+.cp-week-day.is-today{background:linear-gradient(145deg,#fff0f5,#f4edff);border-color:#e8cddd}
+.cp-week-name{text-align:center;font-size:10px;font-weight:900;text-transform:uppercase;color:#8f8394;letter-spacing:.04em}
+.cp-week-num{text-align:center;font-size:19px;font-weight:900;color:#51475c;margin:2px 0 7px}
+.cp-week-event{display:block;width:100%;border:0;border-radius:10px;padding:7px 6px;margin:0 0 5px;background:linear-gradient(135deg,#ffd9e5,#eee0ff);color:#51485d;text-align:left;font:inherit;cursor:pointer}
+.cp-week-event b{display:block;font-size:10px;line-height:1.25;overflow-wrap:anywhere}
+.cp-week-event span{display:block;font-size:9px;line-height:1.25;color:#786e80;margin-top:3px;overflow-wrap:anywhere}
+.cp-week-none{text-align:center;color:#c8bbc7;font-weight:800;padding-top:10px}
+.cp-week-hint{font-size:11px;color:#887d8d;margin-top:8px}
+@media(max-width:900px){.cp-week-strip{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:600px){.cp-week-strip{grid-template-columns:repeat(2,1fr)}}
+
 </style>
 <style id="v21Exact">
 html,body{background:#fffafd!important;color:#373452!important;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif!important}body{margin:0!important}.app{display:block!important;min-height:100vh!important}.side{display:none!important}.main{padding:0!important;max-width:none!important}.top{display:none!important}.page{display:none!important}.page.active{display:block!important}
@@ -543,29 +545,54 @@ window.saveNetworks=function(){
 function setSocials(){['instagram','facebook','linkedin'].forEach(k=>{const a=document.querySelector('[data-social="'+k+'"]');if(!a)return;const u=socialUrl(k);a.href=u||'#';a.target=u?'_blank':'';a.rel=u?'noopener':'';a.style.opacity=u?'1':'.38';a.onclick=u?null:(e)=>{e.preventDefault();openPage('settings')}})}
 window.openPage=function(id){document.getElementById('cpDashboard').style.display=id==='home'?'block':'none';if(id==='home')scheduleInstagramRefresh();document.querySelectorAll('.cp-workspace .page').forEach(x=>x.classList.remove('active'));if(id!=='home'){const p=document.getElementById(id);if(p)p.classList.add('active')}document.querySelectorAll('.cp-nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===id));if(id==='calendar')renderCalendar();if(id==='settings'){const map={instagram:'Ig',facebook:'Fb',linkedin:'Li'};Object.keys(map).forEach(k=>{const a=document.getElementById('cp'+map[k]);if(a)a.value=socialUrl(k);const b=document.getElementById('set'+k[0].toUpperCase()+k.slice(1));if(b)b.value=socialUrl(k)})}window.scrollTo({top:0,behavior:'smooth'})};
 
-function openCalendarItemInStudio(row){
- try{
-  openPage('studio');
-  const set=(sels,value)=>{if(value===undefined||value===null||value==='')return;for(const sel of sels){const el=document.querySelector(sel);if(el){el.value=String(value);el.dispatchEvent(new Event('change',{bubbles:true}));break}}};
-  set(['#aiTopic','#aiActualite','#studioTopic','textarea[name="actualite"]','textarea[name="Informations"]'],val(row,'Titre','Formation','Angle_marketing'));
-  set(['#aiFormation','#studioFormation','select[name="Formation"]'],val(row,'Formation'));
-  set(['#aiPublic','#studioPublic','select[name="Public_cible"]'],val(row,'Public_cible'));
-  set(['#aiFormat','#studioFormat','select[name="Format"]'],val(row,'Format'));
-  set(['#aiNetwork','#studioNetwork','select[name="Reseau"]'],val(row,'Reseau','Réseau'));
-  set(['#aiNotes','#studioNotes','textarea[name="Notes"]'],[val(row,'Angle_marketing'),val(row,'Pourquoi_maintenant'),val(row,'A_prevoir')].filter(Boolean).join('\n'));
-  window.scrollTo({top:0,behavior:'smooth'});
- }catch(e){openPage('studio')}
-}
+window.openWeekItem=function(idx){
+ const cal=rows('CALENDRIER'), x=cal[idx];
+ if(!x)return;
+ openPage('studio');
+ const title=val(x,'Titre','Formation')||'';
+ const formation=val(x,'Formation')||'';
+ const target=val(x,'Public_cible')||'';
+ const angle=val(x,'Angle_marketing')||'';
+ const why=val(x,'Pourquoi_maintenant')||'';
+ const prep=val(x,'A_prevoir')||'';
+ const fmt=val(x,'Format')||'';
+ const date=val(x,'Date_publication','Date')||'';
+
+ const form=document.getElementById('aiForm');
+ if(form&&formation){
+   const wanted=String(formation).toLowerCase();
+   const opt=[...form.options].find(o=>String(o.textContent).toLowerCase().includes(wanted)||String(o.value).toLowerCase().includes(wanted));
+   if(opt)form.value=opt.value;
+ }
+ const targ=document.getElementById('aiTarget');
+ if(targ&&target){
+   const wanted=String(target).toLowerCase();
+   const opt=[...targ.options].find(o=>wanted.includes(String(o.value).toLowerCase())||String(o.value).toLowerCase().includes(wanted));
+   if(opt)targ.value=opt.value;
+   document.querySelectorAll('#targetChips .chip').forEach(b=>b.classList.toggle('on',b.dataset.value===targ.value));
+ }
+ const facts=document.getElementById('aiFacts');
+ if(facts){
+   const bits=[
+     title ? 'Sujet prévu : '+title : '',
+     date ? 'Date de publication prévue : '+fmtDate(date) : '',
+     fmt ? 'Format prévu : '+fmt : '',
+     angle ? 'Angle : '+angle : '',
+     why ? 'Pourquoi maintenant : '+why : '',
+     prep ? 'À prévoir : '+prep : ''
+   ].filter(Boolean);
+   facts.value=bits.join('\n');
+ }
+ window.scrollTo({top:0,behavior:'smooth'});
+};
+
 function renderDash(){
  const cal=rows('CALENDRIER'), pubs=rows('CONTENUS'), forms=rows('FORMATIONS'), ideas=rows('IDEES');
  const now=new Date(); now.setHours(0,0,0,0);
  const weekStart=new Date(now); weekStart.setDate(now.getDate()-((now.getDay()+6)%7));
  const weekEnd=new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6); weekEnd.setHours(23,59,59,999);
  const datedCal=cal.map(x=>({x,d:dateVal(val(x,'Date_publication','Date'))})).filter(o=>o.d&&!isNaN(o.d));
- const weekItems=datedCal.filter(o=>o.d>=weekStart&&o.d<=weekEnd&&!/publi/i.test(String(val(o.x,'Statut')||''))).sort((a,b)=>a.d-b.d).map(o=>o.x);
- const weekDays=Array.from({length:7},(_,i)=>{const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);return d});
- const sameDay=(a,b)=>a&&b&&a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
- const agendaHtml=weekDays.map((d,i)=>{const events=datedCal.filter(o=>sameDay(o.d,d)&&!/publi/i.test(String(val(o.x,'Statut')||''))).map(o=>o.x);const names=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];return `<div class="cp-day ${sameDay(d,now)?'today':''}"><div class="cp-dayname">${names[i]}</div><div class="cp-daynum">${d.getDate()}</div>${events.length?events.map(x=>`<button class="cp-event" onclick='openCalendarItemInStudio(${JSON.stringify(x).replace(/'/g,"&#39;")})'>${esc2(val(x,'Titre','Formation')||'Publication')}<small>${esc2(val(x,'Format','Public_cible')||'À préparer')}</small></button>`).join(''):`<div class="cp-emptyday">·</div>`}</div>`}).join('');
+ const weekItems=datedCal.filter(o=>o.d>=weekStart&&o.d<=weekEnd&&!/publi/i.test(String(val(o.x,'Statut')||''))).sort((a,b)=>a.d-b.d).slice(0,4).map(o=>o.x);
  const upcoming=datedCal.filter(o=>o.d>=now).sort((a,b)=>a.d-b.d).slice(0,4).map(o=>o.x);
  const activeForms=forms.filter(x=>String(val(x,'Actif')||'oui').toLowerCase()!=='non');
  const formWithDates=activeForms.map(x=>({x,d:dateVal(val(x,'Dates_sessions','Date_session','Date_debut','Date'))})).filter(o=>o.d&&!isNaN(o.d)&&o.d>=now).sort((a,b)=>a.d-b.d);
@@ -576,8 +603,13 @@ function renderDash(){
  const networkPost=(name)=>{const all=pubs.filter(x=>String(val(x,'Reseau','Réseau','Public_cible')||'').toLowerCase().includes(name.toLowerCase()));const pub=all.filter(x=>/publi|valid|prêt|pret/i.test(String(val(x,'Statut')||'')));const arr=(pub.length?pub:all).slice().sort((a,b)=>new Date(val(b,'Date_publication','Date_creation')||0)-new Date(val(a,'Date_publication','Date_creation')||0));return arr[0]||null};
  const postLink=(x,network)=>{if(x){for(const k of ['Lien_publication','URL_publication','Lien','URL','Permalink','Lien_post','Post_URL']){const u=x[k];if(typeof u==='string'&&/^https?:\/\//i.test(u.trim()))return u.trim()}}return socialUrl(network.toLowerCase())||'#'};
  const netCards=['Instagram','Facebook','LinkedIn'].map(n=>({name:n,post:networkPost(n)}));
- const prepare=weekItems.length?weekItems:upcoming.slice(0,3);
- const list=prepare.length?prepare.map(x=>{const im=imageOf(x);return `<div class="cp-prepare-row"><div class="cp-date">${esc2(fmtDate(val(x,'Date_publication','Date')))}</div><div><b>${esc2(val(x,'Titre','Formation')||'Publication à préparer')}</b><br><span class="cp-tag">${esc2(val(x,'Format')||val(x,'Public_cible')||'Contenu')}</span></div>${im?`<img class="cp-prepare-thumb" src="${esc2(im)}">`:`<div class="cp-prepare-thumb"></div>`}</div>`}).join(''):'<div class="muted">Aucun contenu planifié dans les prochains jours.</div>';
+ const horizonEnd=new Date(now); horizonEnd.setDate(now.getDate()+6); horizonEnd.setHours(23,59,59,999);
+ const dayNames=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+ const weekStrip=Array.from({length:7},(_,offset)=>{
+   const d=new Date(now); d.setDate(now.getDate()+offset);
+   const events=datedCal.filter(o=>o.d>=new Date(d.getFullYear(),d.getMonth(),d.getDate())&&o.d<=new Date(d.getFullYear(),d.getMonth(),d.getDate(),23,59,59,999)&&!/publi/i.test(String(val(o.x,'Statut')||'')));
+   return `<div class="cp-week-day ${offset===0?'is-today':''}"><div class="cp-week-name">${offset===0?"Aujourd’hui":dayNames[d.getDay()]}</div><div class="cp-week-num">${d.getDate()}</div>${events.length?events.map(o=>{const idx=cal.indexOf(o.x);return `<button class="cp-week-event" onclick="openWeekItem(${idx})"><b>${esc2(val(o.x,'Titre','Formation')||'Publication')}</b><span>${esc2(val(o.x,'Format')||val(o.x,'Public_cible')||'À préparer')}</span></button>`}).join(''):'<div class="cp-week-none">·</div>'}</div>`;
+ }).join('');
  const formTitle=val(nextForm,'Intitule','Formation','Titre')||'Une formation à mettre en lumière'; const ideaTitle=val(idea,'Concept','Titre')||'Une nouvelle idée à explorer';
  const formImg=imageOf(nextForm), ideaImg=imageOf(idea);
  const noVisual=pubs.filter(x=>!imageOf(x)&&!/publi/i.test(String(val(x,'Statut')||''))).length;
@@ -593,7 +625,7 @@ function renderDash(){
  <button class="cp-action purple" onclick="openPage('ideas')"><span class="round">💡</span><span><h3>Trouver<br>des idées</h3><p>Des idées personnalisées selon vos actualités et votre calendrier</p></span><span class="arr">→</span></button>
  <button class="cp-action purple" onclick="openPage('calendar')"><span class="round">▣</span><span><h3>Mon<br>calendrier</h3><p>Visualisez, organisez et planifiez vos publications</p></span><span class="arr">→</span></button></div>
  <div class="cp-today"><section class="cp-today-main"><div class="cp-titleline"><h2>☀️ Aujourd’hui dans <b>COM’PLICE</b></h2><span class="cp-script">Vos actualités prennent vie !</span></div><div class="cp-today-grid">
- <div class="cp-mini"><h4>📅 Ma semaine de communication</h4><div class="cp-weekagenda">${agendaHtml}</div></div>
+ <div class="cp-mini"><h4>📅 Ma semaine de communication</h4><div class="cp-week-strip">${weekStrip}</div><div class="cp-week-hint">Cliquez sur un contenu prévu pour l’ouvrir directement dans le générateur IA.</div></div>
  <div class="cp-mini orange"><h4>🎓 Prochaine formation à valoriser</h4><div class="cp-funvisual form"><span class="blob b1"></span><span class="blob b2"></span><span class="spark s1">✦</span><span class="mainico">🎓</span><span class="spark s2">✧</span></div><div class="cp-photoText"><b>${esc2(formTitle)}</b><p>${esc2(val(nextForm,'Dates_sessions','Rythme_Public','Duree')||'Prête à être valorisée')}</p><button class="cp-softbtn" onclick="openPage('studio')">Créer une publication →</button></div></div>
  <div class="cp-mini purple"><h4>★ L’idée du moment</h4><div class="cp-funvisual idea"><span class="blob b1"></span><span class="blob b2"></span><span class="spark s1">✦</span><span class="mainico">💡</span><span class="spark s2">✧</span></div><div class="cp-photoText"><b>${esc2(ideaTitle)}</b><p>${esc2(val(idea,'Description')||'Une piste créative à transformer en contenu.')}</p><button class="cp-softbtn" onclick="openPage('ideas')">Voir les idées →</button></div></div>
  </div>
