@@ -252,10 +252,35 @@ async function prepareAi(){
  const training=(D.FORMATIONS||[]).find(x=>formTitle(x)===form)||{};
  const ideaRecord=(D.IDEES||[]).find(x=>ideaTitle(x)===idea)||{};
  const knowledge=(D.SOURCES||[]).filter(x=>isActive(x)).slice(0,12).map(x=>({titre:field(x,'Titre'),type:field(x,'Type'),informations:field(x,'Informations','Information','Contenu')}));
+ const creativeDirection={
+   role:"Tu es le directeur créatif social media de COM' FACTORY. Tu transformes les informations réelles du CFA NOA / CFPPA Rodez - La Roque en contenus qui donnent envie de regarder, commenter, enregistrer ou partager, sans jamais inventer un fait.",
+   priority:"QUALITE AVANT QUANTITE. Le résultat doit être nettement plus créatif qu'un post institutionnel classique et directement exploitable par l'équipe communication.",
+   antiGeneric:[
+     "Interdit de commencer par Découvrez, Saviez-vous, Nous formons les professionnels de demain ou Bienvenue dans notre formation.",
+     "Interdit d'écrire Inscrivez-vous maintenant sauf si une date ou une ouverture d'inscription est explicitement fournie.",
+     "Ne jamais inventer un élève, une équipe, un témoignage, un chiffre, une durée, une date, un partenaire, un résultat, une scène ou une organisation non présents dans les données.",
+     "Si une information manque, construire le concept autour de ce qui peut réellement être filmé ou montré, sans prétendre que cela existe déjà."
+   ],
+   hooks:"Première ligne courte et intrigante. Chercher une tension, une surprise, une question concrète, un détail métier ou une immersion. L'accroche doit donner envie de voir la suite en moins de 3 secondes.",
+   creativity:{
+     Efficace:"simple, précis, vivant, immédiatement compréhensible",
+     Créatif:"angle éditorial distinctif, narration, rythme, formulation mémorable",
+     Waouh:"concept signature réellement surprenant mais crédible : POV, défi, mini-série, avant/après, vrai/faux, 3 secondes pour choisir, duel de gestes, coulisses, contraste idées reçues/réalité. Ne jamais simuler un événement qui n'a pas eu lieu."
+   },
+   networkRules:{
+     Instagram:"rythme visuel, hook très court, phrases aérées, interaction naturelle, Reel/carrousel pensé pour rétention et partage",
+     Facebook:"plus humain et narratif, ancrage concret, parents/jeunes/territoire, question finale naturelle",
+     LinkedIn:"professionnel sans jargon, compétences, pédagogie, alternance, expertise, entreprises et valeur concrète"
+   },
+   production:"Pour Reel/vidéo, fournir un mini storyboard exploitable plan par plan avec durée indicative, ce qu'on filme, texte écran ou voix off et plan final. Pour carrousel, donner couverture + contenu de chaque slide. Pour photo, préciser la photo à prendre.",
+   hashtags:"Hashtags propres au réseau et au sujet : métier/compétence + formation + apprentissage/formation pro + territoire si pertinent + cible. 5 à 9 maximum. Aucun caractère ':' ou espace dans un hashtag, aucun hashtag générique artificiel, aucune promesse de portée.",
+   cta:"CTA naturel et adapté à l'objectif : se projeter, commenter, enregistrer, partager, demander des informations ou découvrir la formation. Pas de pression commerciale.",
+   outputGoal:"Chaque réseau doit recevoir une vraie réécriture, pas le même texte recopié. Utiliser uniquement training, idea, facts et knowledge comme base factuelle."
+ };
  $('#aiResult').innerHTML='<div class="notice">✨ COM’ FACTORY travaille votre contenu…</div>';
  try{
    const r=await fetch(backend+'/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-     universe,formation:form,training,idea:ideaRecord,ideaLabel:idea,target,objective:obj,contentType:typ,networks:nets,tone,creativity:creative,facts,knowledge
+     universe,formation:form,training,idea:ideaRecord,ideaLabel:idea,target,objective:obj,contentType:typ,networks:nets,tone,creativity:creative,facts,knowledge,creativeDirection
    })});
    const raw=await r.text(); let data={}; try{data=JSON.parse(raw)}catch{}
    if(!r.ok)throw new Error(data.error||raw||'Erreur du moteur IA');
