@@ -271,21 +271,34 @@ function updateMechanismHint(){
  el.textContent=level==='Waouh'?'Mode Waouh : une mécanique interactive forte est obligatoire ; une vidéo institutionnelle classique est refusée.':'COM’ FACTORY choisit la mécanique selon la formation, la cible, le format et l’historique.';
 }
 function renderAiResult(data){
- const networkItems=Array.isArray(data.outputs)?data.outputs:(data.networks&&typeof data.networks==='object'?Object.entries(data.networks).map(([network,v])=>({network,...(v||{})})):[]);
- const concept=data.concept||data.mechanism||'';
- const nets=networkItems.map(n=>{
-   const tags=(n.hashtags||[]).join(' ');
-   const copy=[n.hook,n.copy].filter(Boolean).join('\n\n');
-   return `<div class="row" style="margin-top:14px">
-     <span class="tag">${esc(n.network||'Réseau')}</span>
-     <div style="white-space:pre-wrap;line-height:1.6;font-size:1.02rem">${esc(copy)}</div>
-     ${n.visual?`<p><b>🎬 À filmer / créer</b><br>${esc(n.visual)}</p>`:''}
-     ${n.production?`<div class="notice"><b>🎥 Réalisation</b><br><span style="white-space:pre-wrap">${esc(n.production)}</span></div>`:''}
-     ${n.preparation?`<div class="notice"><b>📌 À préparer avant</b><br>${esc(n.preparation)}</div>`:''}
-     ${tags?`<p><b># Hashtags</b><br>${esc(tags)}</p>`:''}
-   </div>`;
- }).join('');
- $('#aiResult').innerHTML=`${concept?`<div class="notice ok"><b>💡 Concept</b><br>${esc(concept)}</div>`:''}${data.strategy?`<div class="muted" style="margin:8px 0 12px">${esc(data.strategy)}</div>`:''}${nets}${(data.crossNetworkTip||data.cross_network_tip)?`<div class="notice"><b>🔄 Adaptation multi-réseaux</b><br>${esc(data.crossNetworkTip||data.cross_network_tip)}</div>`:''}`;
+ const val=v=>v==null?'':(typeof v==='string'?v:JSON.stringify(v));
+ const concept=data.concept||{};
+ const strategy=data.strategie||data.strategy||{};
+ const publication=data.publication||{};
+ const tournage=data.tournage||{};
+ const production=data.production||{};
+ const hashtags=Array.isArray(data.hashtags)?data.hashtags:[];
+ const conceptHtml=typeof concept==='object'
+   ? `<div class="notice ok"><b>💡 Concept — ${esc(concept.nom||concept.mecanique||'')}</b>${concept.mecanique?`<br><span class="tag">${esc(concept.mecanique)}</span>`:''}${concept.promesse?`<p>${esc(concept.promesse)}</p>`:''}</div>`
+   : (concept?`<div class="notice ok"><b>💡 Concept</b><br>${esc(concept)}</div>`:'');
+ const strategyHtml=(strategy&&typeof strategy==='object'&&Object.keys(strategy).length)
+   ? `<div class="notice"><b>🎯 Stratégie</b>${strategy.angle?`<p><b>Angle :</b> ${esc(strategy.angle)}</p>`:''}${strategy.public?`<p><b>Public :</b> ${esc(strategy.public)}</p>`:''}${strategy.objectif?`<p><b>Objectif :</b> ${esc(strategy.objectif)}</p>`:''}${strategy.pourquoi_ca_marche?`<p><b>Pourquoi ça marche :</b> ${esc(strategy.pourquoi_ca_marche)}</p>`:''}</div>`
+   : (strategy?`<div class="notice"><b>🎯 Stratégie</b><br>${esc(val(strategy))}</div>`:'');
+ const publicationHtml=(publication&&typeof publication==='object'&&Object.keys(publication).length)
+   ? `<div class="row" style="margin-top:14px"><b>📱 Publication</b>${publication.accroche?`<h3>${esc(publication.accroche)}</h3>`:''}${publication.texte?`<div style="white-space:pre-wrap;line-height:1.6;font-size:1.02rem">${esc(publication.texte)}</div>`:''}</div>`:'';
+ const plans=Array.isArray(tournage.plans)?tournage.plans:[];
+ const plansHtml=plans.map((p,i)=>`<div class="row" style="margin-top:8px"><b>Plan ${esc(p.numero||i+1)}${p.duree?` — ${esc(p.duree)}`:''}</b>${p.visuel?`<p><b>À filmer :</b> ${esc(p.visuel)}</p>`:''}${p.texte_ecran?`<p><b>Texte écran :</b> ${esc(p.texte_ecran)}</p>`:''}${p.voix_off?`<p><b>Voix off :</b> ${esc(p.voix_off)}</p>`:''}</div>`).join('');
+ const tournageHtml=(tournage&&typeof tournage==='object'&&Object.keys(tournage).length)
+   ? `<div class="notice" style="margin-top:14px"><b>🎬 Tournage / réalisation</b>${tournage.format?`<p><span class="tag">${esc(tournage.format)}</span></p>`:''}${plansHtml}</div>`:'';
+ const prep=Array.isArray(production.a_prevoir)?production.a_prevoir:[];
+ const precautions=Array.isArray(production.precautions)?production.precautions:[];
+ const productionHtml=(prep.length||precautions.length)
+   ? `<div class="notice"><b>📌 À préparer</b>${prep.length?`<ul>${prep.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}${precautions.length?`<p><b>Précautions :</b></p><ul>${precautions.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}</div>`:'';
+ const tagsHtml=hashtags.length?`<p><b># Hashtags</b><br>${hashtags.map(x=>esc(x)).join(' ')}</p>`:'';
+ // Compatibilité avec l'ancien format du Worker, au cas où une ancienne réponse serait encore renvoyée.
+ const oldItems=Array.isArray(data.outputs)?data.outputs:(data.networks&&typeof data.networks==='object'?Object.entries(data.networks).map(([network,v])=>({network,...(v||{})})):[]);
+ const oldHtml=(!publicationHtml&&!tournageHtml&&oldItems.length)?oldItems.map(n=>{const tags=(n.hashtags||[]).join(' '),copy=[n.hook,n.copy].filter(Boolean).join('\n\n');return `<div class="row" style="margin-top:14px"><span class="tag">${esc(n.network||'Réseau')}</span><div style="white-space:pre-wrap;line-height:1.6;font-size:1.02rem">${esc(copy)}</div>${n.visual?`<p><b>🎬 À filmer / créer</b><br>${esc(n.visual)}</p>`:''}${n.production?`<div class="notice"><b>🎥 Réalisation</b><br><span style="white-space:pre-wrap">${esc(n.production)}</span></div>`:''}${n.preparation?`<div class="notice"><b>📌 À préparer avant</b><br>${esc(n.preparation)}</div>`:''}${tags?`<p><b># Hashtags</b><br>${esc(tags)}</p>`:''}</div>`}).join(''):'';
+ $('#aiResult').innerHTML=conceptHtml+strategyHtml+publicationHtml+tournageHtml+productionHtml+tagsHtml+oldHtml;
 }
 async function prepareAi(){
  const nets=[...document.querySelectorAll('.aiNet:checked')].map(x=>x.value); if(!nets.length)return alert('Choisissez au moins un réseau.');
