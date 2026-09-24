@@ -176,16 +176,45 @@ async function saveSource(){
  await grist.docApi.applyUserActions([['AddRecord',T.SOURCES,null,vals]]);D.SOURCES=rows(await grist.docApi.fetchTable(T.SOURCES));closeModal();renderSources();
 }
 
+function field(obj,...names){
+ if(!obj)return '';
+ for(const n of names){if(obj[n]!==undefined&&obj[n]!==null&&String(obj[n]).trim()!=='')return obj[n];}
+ const norm=v=>String(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+ const keys=Object.keys(obj);
+ for(const n of names){const nn=norm(n);const k=keys.find(k=>norm(k)===nn);if(k&&obj[k]!==undefined&&obj[k]!==null)return obj[k];}
+ return '';
+}
+function isActive(x){
+ const v=field(x,'Actif','Active','actif');
+ if(v===''||v===null||v===undefined)return true;
+ if(typeof v==='boolean')return v;
+ const z=String(v).trim().toLowerCase();
+ return !['false','faux','non','no','0','inactif'].includes(z);
+}
+function formTitle(x){return String(field(x,'Intitule','Intitulé','Formation','Titre','Nom')).trim()}
+function ideaTitle(x){return String(field(x,'Concept','Idee','Idée','Angle','Titre')).trim()}
+function formTypeValue(x){return String(field(x,'Type','type','Univers')).trim().toLowerCase()}
 function fillAiForms(){
  const u=$('#aiUniverse')?.value||'Formation longue';
- let fs=(D.FORMATIONS||[]).filter(x=>x.Actif!==false);
- if(u==='Formation longue')fs=fs.filter(x=>x.Type==='Longue'||x.Type==='VAE');
- else if(u==='Formation courte')fs=fs.filter(x=>x.Type==='Courte');
- const f=$('#aiForm');if(f)f.innerHTML=(u==='Vie du centre'||u==='Entreprise / partenaire'||u==='Apprenant / témoignage'?'<option>Communication transversale</option>':'')+fs.map(x=>`<option>${esc(x.Intitule)}</option>`).join('');
- const ideas=$('#aiIdea');if(ideas)ideas.innerHTML=(D.IDEES||[]).filter(x=>x.Actif!==false).map(x=>`<option>${esc(x.Concept)}</option>`).join('');
+ let fs=(D.FORMATIONS||[]).filter(x=>isActive(x)&&formTitle(x));
+ if(u==='Formation longue')fs=fs.filter(x=>{const t=formTypeValue(x);return t.includes('long')||t.includes('vae')});
+ else if(u==='Formation courte')fs=fs.filter(x=>formTypeValue(x).includes('court'));
+ const f=$('#aiForm');
+ if(f){
+   const transverse=(u==='Vie du centre'||u==='Entreprise / partenaire'||u==='Apprenant / témoignage')?'<option value="Communication transversale">Communication transversale</option>':'';
+   f.innerHTML=transverse+fs.map((x,i)=>`<option value="${esc(formTitle(x))}">${esc(formTitle(x))}</option>`).join('');
+   if(!f.options.length)f.innerHTML='<option value="">— Aucune formation trouvée —</option>';
+ }
+ const ai=(D.IDEES||[]).filter(x=>isActive(x)&&ideaTitle(x));
+ const ideas=$('#aiIdea');
+ if(ideas){
+   ideas.innerHTML='<option value="">— Choisir un angle —</option>'+ai.map(x=>`<option value="${esc(ideaTitle(x))}">${esc(ideaTitle(x))}</option>`).join('');
+   if(ai.length===0)ideas.innerHTML='<option value="">— Aucune idée trouvée —</option>';
+ }
 }
 function surpriseAi(){
- const ideas=(D.IDEES||[]).filter(x=>x.Actif!==false);if(ideas.length){const x=ideas[Math.floor(Math.random()*ideas.length)];$('#aiIdea').value=x.Concept;if(x.Public)$('#aiTarget').value=x.Public;if(x.Creativite)$('#aiCreativity').value=x.Creativite;}
+ const ideas=(D.IDEES||[]).filter(x=>isActive(x)&&ideaTitle(x));
+ if(ideas.length){const x=ideas[Math.floor(Math.random()*ideas.length)];$('#aiIdea').value=ideaTitle(x);const pub=field(x,'Public','Public_cible','Cible');const cre=field(x,'Creativite','Créativité');if(pub)$('#aiTarget').value=pub;if(cre)$('#aiCreativity').value=cre;}
  const types=['Reel / vidéo courte','Carrousel','Interview','Story','Photo + texte'];$('#aiContentType').value=types[Math.floor(Math.random()*types.length)];
 }
 function saveAiBackend(){
@@ -220,12 +249,13 @@ async function prepareAi(){
  const backend=(localStorage.getItem('comfactory_ai_backend')||'').replace(/\/+$/,'');
  if(!backend){$('#aiResult').innerHTML='<div class="notice">🔐 Renseignez d’abord l’adresse du moteur IA dans « Connexion IA ».</div>';return;}
  const form=$('#aiForm').value||'Communication du centre', idea=$('#aiIdea').value||'', target=$('#aiTarget').value, obj=$('#aiObjective').value, typ=$('#aiContentType').value, tone=$('#aiTone').value, creative=$('#aiCreativity').value, facts=$('#aiFacts').value.trim(), universe=$('#aiUniverse').value;
- const training=(D.FORMATIONS||[]).find(x=>x.Intitule===form)||{};
- const knowledge=(D.SOURCES||[]).filter(x=>x.Actif!==false).slice(0,12).map(x=>({titre:x.Titre,type:x.Type,informations:x.Informations}));
+ const training=(D.FORMATIONS||[]).find(x=>formTitle(x)===form)||{};
+ const ideaRecord=(D.IDEES||[]).find(x=>ideaTitle(x)===idea)||{};
+ const knowledge=(D.SOURCES||[]).filter(x=>isActive(x)).slice(0,12).map(x=>({titre:field(x,'Titre'),type:field(x,'Type'),informations:field(x,'Informations','Information','Contenu')}));
  $('#aiResult').innerHTML='<div class="notice">✨ COM’ FACTORY travaille votre contenu…</div>';
  try{
    const r=await fetch(backend+'/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-     universe,formation:form,training,idea,target,objective:obj,contentType:typ,networks:nets,tone,creativity:creative,facts,knowledge
+     universe,formation:form,training,idea:ideaRecord,ideaLabel:idea,target,objective:obj,contentType:typ,networks:nets,tone,creativity:creative,facts,knowledge
    })});
    const raw=await r.text(); let data={}; try{data=JSON.parse(raw)}catch{}
    if(!r.ok)throw new Error(data.error||raw||'Erreur du moteur IA');
