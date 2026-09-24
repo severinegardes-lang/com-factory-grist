@@ -155,6 +155,26 @@ body{background:
 .cp-form textarea{min-height:95px;resize:vertical}.cp-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}.cp-msg{font-size:12px;font-weight:800;color:#4e8d73;margin-top:8px}
 @media(max-width:650px){.cp-form{grid-template-columns:1fr}.cp-form .full{grid-column:auto}}
 
+
+/* ===== V33 correctifs demandés ===== */
+#home .card:has([onclick*="planner"]), #home [data-page="planner"], #home .planner-preview,
+#planner, #planner .card, #planner .mini-plan-card, #planner .plan-card{
+  height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;
+}
+#home .card:has([onclick*="planner"]) *, #home .planner-preview *,
+#planner .card *, #planner .mini-plan-card *, #planner .plan-card *{
+  max-height:none!important;overflow:visible!important;text-overflow:clip!important;
+  white-space:normal!important;-webkit-line-clamp:unset!important;line-clamp:unset!important;
+}
+.cp-week-summary{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:12px}
+.cp-week-summary .cp-wday{min-width:0;padding:10px 8px;border-radius:16px;background:rgba(255,255,255,.72);border:1px solid rgba(226,210,222,.9)}
+.cp-week-summary .cp-wdate{font-size:11px;font-weight:900;margin-bottom:7px}
+.cp-week-summary .cp-empty{font-size:10px;color:#9a9099}
+.cp-week-summary .cp-witem{display:block;width:100%;text-align:left;border:0;border-left:4px solid var(--cc,#cf87a5);background:var(--cb,#faeaf1);border-radius:10px;padding:7px;margin:5px 0;cursor:pointer;font:inherit}
+.cp-week-summary .cp-witem b{display:block;font-size:11px;white-space:normal}.cp-week-summary .cp-witem small{font-size:9px;white-space:normal}
+#cal .day,#cal .cal-day,#cal [data-date]{cursor:pointer!important}
+@media(max-width:800px){.cp-week-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
 </style>
 <style id="v21Exact">
 html,body{background:#fffafd!important;color:#373452!important;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif!important}body{margin:0!important}.app{display:block!important;min-height:100vh!important}.side{display:none!important}.main{padding:0!important;max-width:none!important}.top{display:none!important}.page{display:none!important}.page.active{display:block!important}
@@ -259,7 +279,7 @@ function refresh(){
  $('#kForms').textContent=(D.FORMATIONS||[]).filter(x=>x.Actif!==false).length;
  $('#kIdeas').textContent=(D.IDEES||[]).filter(x=>x.Actif!==false).length;
  $('#kMonth').textContent=monthEvents().length;
- renderCalendar();renderForms();renderIdeas();renderSources();fillAiForms();renderDashboard();renderPublications();renderDash();scheduleInstagramRefresh();
+ renderCalendar();renderForms();renderIdeas();renderSources();fillAiForms();renderDashboard();renderPublications();renderDash(); setTimeout(renderHomeWeekFromCalendar,30);scheduleInstagramRefresh();
 }
 function pickOne(groupId,btn,selectId){document.querySelectorAll('#'+groupId+' .chip').forEach(x=>x.classList.remove('on'));btn.classList.add('on');const el=$('#'+selectId);if(el)el.value=btn.dataset.value||'';}
 function pickStory(btn){document.querySelectorAll('#storyChips .chip').forEach(x=>x.classList.remove('on'));btn.classList.add('on');$('#aiUniverse').value=btn.dataset.value;$('#aiObjective').value=btn.dataset.objective||'Créer de l\'engagement';fillAiForms();}
@@ -317,6 +337,54 @@ window.saveCalendarItem=function(){
  if(!(window.grist&&table)){document.getElementById('cpAddMsg').textContent="Connexion Grist indisponible.";return}
  grist.docApi.applyUserActions([['AddRecord',table,null,payload]]).then(()=>{document.getElementById('cpAddMsg').textContent='✓ Ajouté au calendrier.';setTimeout(()=>location.reload(),650)}).catch(e=>document.getElementById('cpAddMsg').textContent='Ajout impossible : '+e.message);
 };
+
+
+function renderHomeWeekFromCalendar(){
+ const host=document.querySelector('.cp-week-strip')||document.querySelector('.cp-week-summary');
+ if(!host)return;
+ host.className='cp-week-summary';
+ const all=rows('CALENDRIER')||[];
+ const today=new Date(); today.setHours(0,0,0,0);
+ const monday=new Date(today); monday.setDate(today.getDate()-((today.getDay()+6)%7));
+ const days=Array.from({length:7},(_,i)=>{const d=new Date(monday);d.setDate(monday.getDate()+i);return d});
+ const keyed={};
+ all.forEach((x,idx)=>{
+   const d=dateVal(val(x,'Date_publication')||val(x,'Date'));
+   if(!d)return;
+   const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+   (keyed[k]||(keyed[k]=[])).push({x,idx});
+ });
+ const dn=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+ host.innerHTML=days.map((d,i)=>{
+   const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+   const items=keyed[k]||[];
+   return `<div class="cp-wday"><div class="cp-wdate">${dn[i]} ${d.getDate()}</div>${items.length?items.map(o=>`<button class="cp-witem ${cpCategoryClass(o.x)}" onclick="openWeekItem(${o.idx})"><b>${esc2(val(o.x,'Titre')||'À préparer')}</b><small>${esc2(cpCategoryLabel(o.x))}${val(o.x,'Statut')?' · '+esc2(val(o.x,'Statut')):''}</small></button>`).join(''):`<div class="cp-empty">Rien de prévu</div>`}</div>`;
+ }).join('');
+}
+
+
+function bindCalendarDayClicks(){
+ const cal=document.getElementById('cal'); if(!cal)return;
+ const cells=[...cal.querySelectorAll('.day,.cal-day,[data-date]')];
+ cells.forEach(cell=>{
+   cell.style.cursor='pointer';
+   if(cell.dataset.cpBound)return; cell.dataset.cpBound='1';
+   cell.addEventListener('click',function(ev){
+     if(ev.target.closest('button,a'))return;
+     let ds=cell.dataset.date||cell.getAttribute('data-date')||'';
+     if(!ds){
+       const txt=(cell.querySelector('.num,.day-num,.date')?.textContent||cell.textContent||'').trim();
+       const n=parseInt(txt,10); if(!n)return;
+       const monthInput=document.getElementById('calMonth');
+       let y,m;
+       if(monthInput&&/^\d{4}-\d{2}$/.test(monthInput.value)){[y,m]=monthInput.value.split('-').map(Number)}
+       else {const z=new Date();y=z.getFullYear();m=z.getMonth()+1}
+       ds=`${y}-${String(m).padStart(2,'0')}-${String(n).padStart(2,'0')}`;
+     }
+     openCalendarModal(ds,false);
+   });
+ });
+}
 
 function renderCalendar(){
  const names=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];let h=names.map(x=>`<div class="dow">${x}</div>`).join('');
@@ -595,7 +663,7 @@ window.saveNetworks=function(){
  const vals={instagram:cleanSocialUrl(document.getElementById('cpIg')?.value||document.getElementById('setInstagram')?.value||socialUrl('instagram')),facebook:cleanSocialUrl(document.getElementById('cpFb')?.value||document.getElementById('setFacebook')?.value||socialUrl('facebook')),linkedin:cleanSocialUrl(document.getElementById('cpLi')?.value||document.getElementById('setLinkedIn')?.value||socialUrl('linkedin'))};
  Object.entries(vals).forEach(([k,v])=>localStorage.setItem('complice_'+k,v));
  localStorage.setItem('complice_networks',JSON.stringify({Instagram:vals.instagram,Facebook:vals.facebook,LinkedIn:vals.linkedin}));
- setSocials();renderDash();alert('✓ Vos réseaux sont enregistrés et reliés aux boutons du haut.');
+ setSocials();renderDash(); setTimeout(renderHomeWeekFromCalendar,30);alert('✓ Vos réseaux sont enregistrés et reliés aux boutons du haut.');
 };
 function setSocials(){['instagram','facebook','linkedin'].forEach(k=>{const a=document.querySelector('[data-social="'+k+'"]');if(!a)return;const u=socialUrl(k);a.href=u||'#';a.target=u?'_blank':'';a.rel=u?'noopener':'';a.style.opacity=u?'1':'.38';a.onclick=u?null:(e)=>{e.preventDefault();openPage('settings')}})}
 window.openPage=function(id){document.getElementById('cpDashboard').style.display=id==='home'?'block':'none';if(id==='home')scheduleInstagramRefresh();document.querySelectorAll('.cp-workspace .page').forEach(x=>x.classList.remove('active'));if(id!=='home'){const p=document.getElementById(id);if(p)p.classList.add('active')}document.querySelectorAll('.cp-nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===id));if(id==='calendar')renderCalendar();if(id==='settings'){const map={instagram:'Ig',facebook:'Fb',linkedin:'Li'};Object.keys(map).forEach(k=>{const a=document.getElementById('cp'+map[k]);if(a)a.value=socialUrl(k);const b=document.getElementById('set'+k[0].toUpperCase()+k.slice(1));if(b)b.value=socialUrl(k)})}window.scrollTo({top:0,behavior:'smooth'})};
@@ -724,7 +792,7 @@ function scheduleInstagramRefresh(){
  [0,800,2200].forEach(ms=>setTimeout(()=>refreshInstagramCard(),ms));
 }
 
-function build(){const old=document.querySelector('.app'); if(!old)return; const pages=[...old.querySelectorAll('.page')]; const shell=document.createElement('div');shell.id='cpShell';shell.innerHTML=`<header class="cp-head"><div class="cp-brand"><img class="cp-logo" src="${LOGO}"><span style="font-size:11px;color:#a58fae;font-weight:800;align-self:flex-end;margin:0 0 20px -10px">V32</span></div><div class="cp-headright"><input class="cp-search" id="cpSearch" placeholder="⌕  Rechercher une formation, un événement…"><div class="cp-social"><a data-social="instagram" title="Instagram">◎ <span>Instagram</span></a><a data-social="facebook" title="Facebook">f <span>Facebook</span></a><a data-social="linkedin" title="LinkedIn">in <span>LinkedIn</span></a></div></div></header><nav class="cp-nav"><button class="active" data-page="home" onclick="openPage('home')"><span class="ico">⌂</span>Accueil</button><button data-page="studio" onclick="openPage('studio')"><span class="ico">✎</span>Créer une publication</button><button data-page="planner" onclick="openPage('planner')"><span class="ico">🧩</span>Exploiter ce que j’ai</button><button data-page="ideas" onclick="openPage('ideas')"><span class="ico">💡</span>Trouver des idées</button><button data-page="calendar" onclick="openPage('calendar')"><span class="ico">▣</span>Mon calendrier</button><button data-page="publications" onclick="openPage('publications')"><span class="ico">▥</span>Mes publications</button><button data-page="settings" onclick="openPage('settings')"><span class="ico">⚙</span>Paramètres</button></nav><main class="cp-wrap"><div id="cpDashboard"></div><div class="cp-workspace" id="cpWorkspace"></div></main>`; document.body.innerHTML='';document.body.appendChild(shell); const ws=document.getElementById('cpWorkspace');pages.forEach(p=>ws.appendChild(p)); const st=document.getElementById('settings'); if(st&&!document.getElementById('cpNetworkConfig')){const box=document.createElement('div');box.id='cpNetworkConfig';box.className='cp-network-config';box.innerHTML='<h3>🌐 Mes réseaux</h3><div class="muted">Renseignez les liens de vos pages. Ils apparaîtront directement en haut de COM’PLICE.</div><div class="cp-network-grid"><label>Instagram<input id="cpIg" placeholder="https://instagram.com/..."></label><label>Facebook<input id="cpFb" placeholder="https://facebook.com/..."></label><label>LinkedIn<input id="cpLi" placeholder="https://linkedin.com/company/..."></label></div><button class="cp-save-net" onclick="saveNetworks()">Enregistrer mes réseaux</button>';st.prepend(box);document.getElementById('cpIg').value=socialUrl('instagram');document.getElementById('cpFb').value=socialUrl('facebook');document.getElementById('cpLi').value=socialUrl('linkedin');} renderDash();setSocials();scheduleInstagramRefresh();
+function build(){const old=document.querySelector('.app'); if(!old)return; const pages=[...old.querySelectorAll('.page')]; const shell=document.createElement('div');shell.id='cpShell';shell.innerHTML=`<header class="cp-head"><div class="cp-brand"><img class="cp-logo" src="${LOGO}"><span style="font-size:11px;color:#a58fae;font-weight:800;align-self:flex-end;margin:0 0 20px -10px">V33</span></div><div class="cp-headright"><input class="cp-search" id="cpSearch" placeholder="⌕  Rechercher une formation, un événement…"><div class="cp-social"><a data-social="instagram" title="Instagram">◎ <span>Instagram</span></a><a data-social="facebook" title="Facebook">f <span>Facebook</span></a><a data-social="linkedin" title="LinkedIn">in <span>LinkedIn</span></a></div></div></header><nav class="cp-nav"><button class="active" data-page="home" onclick="openPage('home')"><span class="ico">⌂</span>Accueil</button><button data-page="studio" onclick="openPage('studio')"><span class="ico">✎</span>Créer une publication</button><button data-page="planner" onclick="openPage('planner')"><span class="ico">🧩</span>Exploiter ce que j’ai</button><button data-page="ideas" onclick="openPage('ideas')"><span class="ico">💡</span>Trouver des idées</button><button data-page="calendar" onclick="openPage('calendar')"><span class="ico">▣</span>Mon calendrier</button><button data-page="publications" onclick="openPage('publications')"><span class="ico">▥</span>Mes publications</button><button data-page="settings" onclick="openPage('settings')"><span class="ico">⚙</span>Paramètres</button></nav><main class="cp-wrap"><div id="cpDashboard"></div><div class="cp-workspace" id="cpWorkspace"></div></main>`; document.body.innerHTML='';document.body.appendChild(shell); const ws=document.getElementById('cpWorkspace');pages.forEach(p=>ws.appendChild(p)); const st=document.getElementById('settings'); if(st&&!document.getElementById('cpNetworkConfig')){const box=document.createElement('div');box.id='cpNetworkConfig';box.className='cp-network-config';box.innerHTML='<h3>🌐 Mes réseaux</h3><div class="muted">Renseignez les liens de vos pages. Ils apparaîtront directement en haut de COM’PLICE.</div><div class="cp-network-grid"><label>Instagram<input id="cpIg" placeholder="https://instagram.com/..."></label><label>Facebook<input id="cpFb" placeholder="https://facebook.com/..."></label><label>LinkedIn<input id="cpLi" placeholder="https://linkedin.com/company/..."></label></div><button class="cp-save-net" onclick="saveNetworks()">Enregistrer mes réseaux</button>';st.prepend(box);document.getElementById('cpIg').value=socialUrl('instagram');document.getElementById('cpFb').value=socialUrl('facebook');document.getElementById('cpLi').value=socialUrl('linkedin');} renderDash();setSocials();scheduleInstagramRefresh();
  const q=document.getElementById('cpSearch');q.addEventListener('keydown',e=>{if(e.key==='Enter'){const term=q.value.trim().toLowerCase();if(!term)return;const f=rows('FORMATIONS').find(x=>JSON.stringify(x).toLowerCase().includes(term));if(f){openPage('formations');return}const c=rows('CONTENUS').find(x=>JSON.stringify(x).toLowerCase().includes(term));if(c){openPage('publications');return}openPage('ideas')}});
  const saveBtn=document.createElement('div');saveBtn.innerHTML='';
  const si=document.getElementById('setInstagram'),sf=document.getElementById('setFacebook'),sl=document.getElementById('setLinkedIn');[[si,'instagram'],[sf,'facebook'],[sl,'linkedin']].forEach(([el,k])=>{if(el){const old=el.value||'';if(!old)el.value=socialUrl(k);el.addEventListener('change',()=>{localStorage.setItem('complice_'+k,el.value.trim());setSocials()})}});
@@ -764,5 +832,9 @@ document.addEventListener('click',function(e){
  }
  if(ds)openCalendarModal(ds,false);
 });
+</script>
+<script>
+const _cpOldRenderCalendar=renderCalendar;
+renderCalendar=function(){const r=_cpOldRenderCalendar.apply(this,arguments);setTimeout(bindCalendarDayClicks,0);return r;};
 </script>
 </body></html>
