@@ -220,6 +220,11 @@ body{background:
 #cal .event.cp37-direction{border-left:4px solid #5c7fc9!important;background:#e8f0ff!important}
 #cal .event.cp37-info{border-left:4px solid #56a8b7!important;background:#e8f8fb!important}
 
+
+/* V44 — édition / suppression des vignettes calendrier */
+.cp44-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.cp44-actions button{flex:1;min-width:185px}
+.cp44-delete{border:1px solid #efc8cf;background:#fff5f6;color:#a63f53;border-radius:12px;padding:10px 14px;font-weight:850;cursor:pointer}
+
 </style>
 <style id="v21Exact">
 html,body{background:#fffafd!important;color:#373452!important;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif!important}body{margin:0!important}.app{display:block!important;min-height:100vh!important}.side{display:none!important}.main{padding:0!important;max-width:none!important}.top{display:none!important}.page{display:none!important}.page.active{display:block!important}
@@ -480,7 +485,7 @@ function renderCalendar(){
      ev.map(x=>{
        const kind=cp37Kind(x);
        const sug=/suggest/i.test(String(x.Statut||x.Origine||''));
-       return `<div class="event cp37-${kind} ${sug?'cp37-suggest':''}" style="cursor:pointer" onclick="event.stopPropagation();openCalendarInStudioById('${esc(String(x.id||x.id_||''))}')">${x.Signature?'⭐ ':''}<b>${esc(x.Titre||'À préparer')}</b>${esc(x.Public_cible||'')} · ${esc(x.Format||'')}${x.Origine?' · '+esc(x.Origine):''}</div>`;
+       return `<div class="event cp37-${kind} ${sug?'cp37-suggest':''}" style="cursor:pointer" onclick="event.stopPropagation();cp44EditCalendar('${esc(String(x.id||x.id_||''))}')">${x.Signature?'⭐ ':''}<b>${esc(x.Titre||'À préparer')}</b>${esc(x.Public_cible||'')} · ${esc(x.Format||'')}${x.Pourquoi_maintenant?' · '+esc(x.Pourquoi_maintenant):''}${x.Origine?' · '+esc(x.Origine):''}</div>`;
      }).join('')
    }</div>`;
  }
@@ -563,7 +568,8 @@ function openEvent(prefillDate=''){
 <option value="Suggestion collègue">✦ Suggestion collègue</option>
 <option value="Direction">● Direction</option>
 <option value="Pour info">● Pour info</option>
-</select></label>
+</select></label><label>Nature / type d’événement<select id="eNature"><option value="">À préciser</option><option>Formation</option><option>Forum / salon</option><option>JPO / portes ouvertes</option><option>Vie du centre</option><option>Entreprise / partenaire</option><option>Recrutement / orientation</option><option>Réunion / information</option><option>Autre</option></select></label>
+<label>Ajouté par<select id="eAuthor"><option value="">À préciser</option><option>Direction</option><option>Chargé d’ingénierie</option><option>Secrétariat</option><option>Communication</option><option>Formateur</option><option>Collègue</option></select></label>
     <label class="wide">Titre / sujet<input id="eTitle" placeholder="Ex. Forum de l’orientation à Rodez"></label>
     <label>Formation liée<select id="eForm"><option value="">Aucune</option>${(D.FORMATIONS||[]).map(x=>`<option>${esc(x.Intitule)}</option>`).join('')}</select></label>
     <label>Public<select id="eTarget"><option>Jeunes</option><option>Parents</option><option>Entreprises</option><option>Professionnels</option><option>Prescripteurs / partenaires</option><option>Tous publics</option></select></label>
@@ -578,7 +584,7 @@ function openEvent(prefillDate=''){
 function cp40Close(){document.getElementById('cp40Modal')?.classList.remove('show')}
 async function saveEvent(openAI=false){
  const msg=document.getElementById('cp40Msg');
- const vals={Date_publication:document.getElementById('eDate').value,Titre:document.getElementById('eTitle').value.trim(),Univers:document.getElementById('eType').value,Formation:document.getElementById('eForm').value,Public_cible:document.getElementById('eTarget').value,Format:document.getElementById('eFormat').value,Objectif:'',Statut:document.getElementById('eStatus').value,Angle_marketing:document.getElementById('eInfo').value,Pourquoi_maintenant:'',A_prevoir:'',Signature:false,Origine:document.getElementById('eType').value};
+ const vals={Date_publication:document.getElementById('eDate').value,Titre:document.getElementById('eTitle').value.trim(),Univers:document.getElementById('eType').value,Formation:document.getElementById('eForm').value,Public_cible:document.getElementById('eTarget').value,Format:document.getElementById('eFormat').value,Objectif:'',Statut:document.getElementById('eStatus').value,Angle_marketing:document.getElementById('eInfo').value,Pourquoi_maintenant:document.getElementById('eNature').value,A_prevoir:'',Signature:false,Origine:document.getElementById('eAuthor').value||document.getElementById('eType').value};
  if(!vals.Date_publication||!vals.Titre){msg.textContent='⚠️ La date et le titre sont obligatoires.';return}
  if(!T||!T.CALENDRIER){msg.textContent='⚠️ Table CALENDRIER introuvable.';return}
  msg.textContent='Enregistrement…';
@@ -599,6 +605,60 @@ async function saveEvent(openAI=false){
      },420);
    }
  }catch(e){console.error(e);msg.textContent='❌ Ajout impossible : '+(e.message||e)}
+}
+
+function cp44FindRecord(id){
+ return (D.CALENDRIER||[]).find(x=>String(x.id||x.id_||'')===String(id));
+}
+function cp44EditCalendar(id){
+ const x=cp44FindRecord(id); if(!x)return;
+ const m=cp40EnsureModal();
+ document.getElementById('cp40Body').innerHTML=`
+  <div class="cp40-form">
+   <label>Date<input id="eDate" type="date" value="${dateKey(x.Date_publication)||''}"></label>
+   <label>Type<select id="eType">
+    ${['Formation longue','Formation courte','Événement / forum / JPO','Autre contenu','Suggestion collègue','Direction','Pour info'].map(v=>`<option ${String(x.Univers||'')===v?'selected':''}>${v==='Suggestion collègue'?'✦':'●'} ${esc(v)}</option>`).join('')}
+   </select></label>
+   <label>Nature / type d’événement<select id="eNature">
+    ${['','Formation','Forum / salon','JPO / portes ouvertes','Vie du centre','Entreprise / partenaire','Recrutement / orientation','Réunion / information','Autre'].map(v=>`<option value="${esc(v)}" ${String(x.Pourquoi_maintenant||'')===v?'selected':''}>${esc(v||'À préciser')}</option>`).join('')}
+   </select></label>
+   <label>Ajouté par<select id="eAuthor">
+    ${['','Direction','Chargé d’ingénierie','Secrétariat','Communication','Formateur','Collègue'].map(v=>`<option value="${esc(v)}" ${String(x.Origine||'')===v?'selected':''}>${esc(v||'À préciser')}</option>`).join('')}
+   </select></label>
+   <label class="wide">Titre / sujet<input id="eTitle" value="${esc(x.Titre||'')}"></label>
+   <label>Formation liée<select id="eForm"><option value="">Aucune</option>${(D.FORMATIONS||[]).map(f=>`<option ${String(f.Intitule)===String(x.Formation||'')?'selected':''}>${esc(f.Intitule)}</option>`).join('')}</select></label>
+   <label>Public<input id="eTarget" value="${esc(x.Public_cible||'')}"></label>
+   <label>Format<input id="eFormat" value="${esc(x.Format||'')}"></label>
+   <label>Statut<select id="eStatus">${['À préparer','Suggestion collègue','Validé'].map(v=>`<option ${String(x.Statut||'')===v?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
+   <label class="wide">Informations à intégrer<textarea id="eInfo">${esc(x.Angle_marketing||'')}</textarea></label>
+  </div>
+  <div id="cp40Msg" class="cp40-msg"></div>
+  <div class="cp44-actions">
+   <button class="btn alt" type="button" onclick="cp44Update('${esc(String(id))}',false)">💾 Enregistrer les modifications</button>
+   <button class="btn" type="button" onclick="cp44Update('${esc(String(id))}',true)">✨ Modifier + ouvrir l’IA</button>
+   <button class="cp44-delete" type="button" onclick="cp44Delete('${esc(String(id))}')">🗑 Supprimer</button>
+  </div>`;
+ m.classList.add('show');
+}
+async function cp44Update(id,openAI){
+ const msg=document.getElementById('cp40Msg'),x=cp44FindRecord(id);if(!x)return;
+ const fields={Date_publication:document.getElementById('eDate').value,Titre:document.getElementById('eTitle').value.trim(),Univers:document.getElementById('eType').value,Formation:document.getElementById('eForm').value,Public_cible:document.getElementById('eTarget').value,Format:document.getElementById('eFormat').value,Statut:document.getElementById('eStatus').value,Angle_marketing:document.getElementById('eInfo').value,Pourquoi_maintenant:document.getElementById('eNature').value,Origine:document.getElementById('eAuthor').value||document.getElementById('eType').value};
+ if(!fields.Date_publication||!fields.Titre){msg.textContent='⚠️ Date et titre obligatoires.';return}
+ try{
+  await grist.docApi.applyUserActions([['UpdateRecord',T.CALENDRIER,Number(id),fields]]);
+  D.CALENDRIER=rows(await grist.docApi.fetchTable(T.CALENDRIER));renderCalendar();try{renderDash()}catch(e){}
+  msg.textContent='✓ Modifications enregistrées.';
+  if(openAI){setTimeout(()=>{cp40Close();openCalendarInStudioById(id)},300)}else setTimeout(cp40Close,300);
+ }catch(e){console.error(e);msg.textContent='❌ Modification impossible : '+(e.message||e)}
+}
+async function cp44Delete(id){
+ if(!confirm('Supprimer cet élément du calendrier ?'))return;
+ const msg=document.getElementById('cp40Msg');
+ try{
+  await grist.docApi.applyUserActions([['RemoveRecord',T.CALENDRIER,Number(id)]]);
+  D.CALENDRIER=rows(await grist.docApi.fetchTable(T.CALENDRIER));renderCalendar();try{renderDash()}catch(e){}
+  cp40Close();
+ }catch(e){console.error(e);msg.textContent='❌ Suppression impossible : '+(e.message||e)}
 }
 function openSource(){ $('#modalSave').style.display='';
  $('#modalTitle').textContent='Ajouter une information';$('#modalBody').innerHTML=`<label>Titre</label><input id="sTitle"><label>Type</label><select id="sType"><option>Nouvelle information</option><option>Fiche produit</option><option>Calendrier</option><option>Événement</option></select><label>Informations factuelles</label><textarea id="sInfo"></textarea>`;$('#modalSave').onclick=saveSource;$('#modal').classList.add('show')
@@ -939,7 +999,7 @@ function scheduleInstagramRefresh(){
  [0,800,2200].forEach(ms=>setTimeout(()=>refreshInstagramCard(),ms));
 }
 
-function build(){const old=document.querySelector('.app'); if(!old)return; const pages=[...old.querySelectorAll('.page')]; const shell=document.createElement('div');shell.id='cpShell';shell.innerHTML=`<header class="cp-head"><div class="cp-brand"><img class="cp-logo" src="${LOGO}"><span style="font-size:11px;color:#a58fae;font-weight:800;align-self:flex-end;margin:0 0 20px -10px">V43</span></div><div class="cp-headright"><input class="cp-search" id="cpSearch" placeholder="⌕  Rechercher une formation, un événement…"><div class="cp-social"><a data-social="instagram" title="Instagram">◎ <span>Instagram</span></a><a data-social="facebook" title="Facebook">f <span>Facebook</span></a><a data-social="linkedin" title="LinkedIn">in <span>LinkedIn</span></a></div></div></header><nav class="cp-nav"><button class="active" data-page="home" onclick="openPage('home')"><span class="ico">⌂</span>Accueil</button><button data-page="studio" onclick="openPage('studio')"><span class="ico">✎</span>Créer une publication</button><button data-page="planner" onclick="openPage('planner')"><span class="ico">🧩</span>Exploiter ce que j’ai</button><button data-page="ideas" onclick="openPage('ideas')"><span class="ico">💡</span>Trouver des idées</button><button data-page="calendar" onclick="openPage('calendar')"><span class="ico">▣</span>Mon calendrier</button><button data-page="publications" onclick="openPage('publications')"><span class="ico">▥</span>Mes publications</button><button data-page="settings" onclick="openPage('settings')"><span class="ico">⚙</span>Paramètres</button></nav><main class="cp-wrap"><div id="cpDashboard"></div><div class="cp-workspace" id="cpWorkspace"></div></main>`; document.body.innerHTML='';document.body.appendChild(shell); const ws=document.getElementById('cpWorkspace');pages.forEach(p=>ws.appendChild(p)); const st=document.getElementById('settings'); if(st&&!document.getElementById('cpNetworkConfig')){const box=document.createElement('div');box.id='cpNetworkConfig';box.className='cp-network-config';box.innerHTML='<h3>🌐 Mes réseaux</h3><div class="muted">Renseignez les liens de vos pages. Ils apparaîtront directement en haut de COM’PLICE.</div><div class="cp-network-grid"><label>Instagram<input id="cpIg" placeholder="https://instagram.com/..."></label><label>Facebook<input id="cpFb" placeholder="https://facebook.com/..."></label><label>LinkedIn<input id="cpLi" placeholder="https://linkedin.com/company/..."></label></div><button class="cp-save-net" onclick="saveNetworks()">Enregistrer mes réseaux</button>';st.prepend(box);document.getElementById('cpIg').value=socialUrl('instagram');document.getElementById('cpFb').value=socialUrl('facebook');document.getElementById('cpLi').value=socialUrl('linkedin');} renderDash();setSocials();scheduleInstagramRefresh();
+function build(){const old=document.querySelector('.app'); if(!old)return; const pages=[...old.querySelectorAll('.page')]; const shell=document.createElement('div');shell.id='cpShell';shell.innerHTML=`<header class="cp-head"><div class="cp-brand"><img class="cp-logo" src="${LOGO}"><span style="font-size:11px;color:#a58fae;font-weight:800;align-self:flex-end;margin:0 0 20px -10px">V44</span></div><div class="cp-headright"><input class="cp-search" id="cpSearch" placeholder="⌕  Rechercher une formation, un événement…"><div class="cp-social"><a data-social="instagram" title="Instagram">◎ <span>Instagram</span></a><a data-social="facebook" title="Facebook">f <span>Facebook</span></a><a data-social="linkedin" title="LinkedIn">in <span>LinkedIn</span></a></div></div></header><nav class="cp-nav"><button class="active" data-page="home" onclick="openPage('home')"><span class="ico">⌂</span>Accueil</button><button data-page="studio" onclick="openPage('studio')"><span class="ico">✎</span>Créer une publication</button><button data-page="planner" onclick="openPage('planner')"><span class="ico">🧩</span>Exploiter ce que j’ai</button><button data-page="ideas" onclick="openPage('ideas')"><span class="ico">💡</span>Trouver des idées</button><button data-page="calendar" onclick="openPage('calendar')"><span class="ico">▣</span>Mon calendrier</button><button data-page="publications" onclick="openPage('publications')"><span class="ico">▥</span>Mes publications</button><button data-page="settings" onclick="openPage('settings')"><span class="ico">⚙</span>Paramètres</button></nav><main class="cp-wrap"><div id="cpDashboard"></div><div class="cp-workspace" id="cpWorkspace"></div></main>`; document.body.innerHTML='';document.body.appendChild(shell); const ws=document.getElementById('cpWorkspace');pages.forEach(p=>ws.appendChild(p)); const st=document.getElementById('settings'); if(st&&!document.getElementById('cpNetworkConfig')){const box=document.createElement('div');box.id='cpNetworkConfig';box.className='cp-network-config';box.innerHTML='<h3>🌐 Mes réseaux</h3><div class="muted">Renseignez les liens de vos pages. Ils apparaîtront directement en haut de COM’PLICE.</div><div class="cp-network-grid"><label>Instagram<input id="cpIg" placeholder="https://instagram.com/..."></label><label>Facebook<input id="cpFb" placeholder="https://facebook.com/..."></label><label>LinkedIn<input id="cpLi" placeholder="https://linkedin.com/company/..."></label></div><button class="cp-save-net" onclick="saveNetworks()">Enregistrer mes réseaux</button>';st.prepend(box);document.getElementById('cpIg').value=socialUrl('instagram');document.getElementById('cpFb').value=socialUrl('facebook');document.getElementById('cpLi').value=socialUrl('linkedin');} renderDash();setSocials();scheduleInstagramRefresh();
  const q=document.getElementById('cpSearch');q.addEventListener('keydown',e=>{if(e.key==='Enter'){const term=q.value.trim().toLowerCase();if(!term)return;const f=rows('FORMATIONS').find(x=>JSON.stringify(x).toLowerCase().includes(term));if(f){openPage('formations');return}const c=rows('CONTENUS').find(x=>JSON.stringify(x).toLowerCase().includes(term));if(c){openPage('publications');return}openPage('ideas')}});
  const saveBtn=document.createElement('div');saveBtn.innerHTML='';
  const si=document.getElementById('setInstagram'),sf=document.getElementById('setFacebook'),sl=document.getElementById('setLinkedIn');[[si,'instagram'],[sf,'facebook'],[sl,'linkedin']].forEach(([el,k])=>{if(el){const old=el.value||'';if(!old)el.value=socialUrl(k);el.addEventListener('change',()=>{localStorage.setItem('complice_'+k,el.value.trim());setSocials()})}});
