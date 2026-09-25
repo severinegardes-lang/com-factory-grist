@@ -1002,6 +1002,61 @@ window.openWeekItem=function(idx){
  window.scrollTo({top:0,behavior:'smooth'});
 };
 
+
+async function cp59RefreshWeek(){
+ const list=document.querySelector('.v57-list');
+ const head=document.querySelector('.v57-head');
+ if(!list||!head||!T.CALENDRIER)return;
+ try{
+   const raw=await grist.docApi.fetchTable(T.CALENDRIER);
+   const cols=Object.keys(raw||{}).filter(k=>Array.isArray(raw[k]));
+   const n=Math.max(0,...cols.map(k=>raw[k].length));
+   const cal=Array.from({length:n},(_,i)=>{
+     const o={}; cols.forEach(k=>o[k]=raw[k][i]); return o;
+   });
+
+   const now=new Date(); now.setHours(0,0,0,0);
+   const monday=new Date(now);
+   monday.setDate(now.getDate()-((now.getDay()+6)%7));
+   monday.setHours(0,0,0,0);
+   const sunday=new Date(monday);
+   sunday.setDate(monday.getDate()+6);
+   sunday.setHours(23,59,59,999);
+
+   const key=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+   const a=key(monday), b=key(sunday);
+   const items=cal.map(x=>({x,d:dateVal(x.Date_publication)}))
+     .filter(o=>o.d&&!isNaN(o.d)&&key(o.d)>=a&&key(o.d)<=b)
+     .sort((x,y)=>key(x.d).localeCompare(key(y.d)));
+
+   const dn=['DIM.','LUN.','MAR.','MER.','JEU.','VEN.','SAM.'];
+   const mn=['JANV.','FÉVR.','MARS','AVR.','MAI','JUIN','JUIL.','AOÛT','SEPT.','OCT.','NOV.','DÉC.'];
+
+   head.innerHTML=`<span>${monday.getDate()} → ${sunday.getDate()} ${mn[sunday.getMonth()].toLowerCase()} ${sunday.getFullYear()}</span><b>${items.length} contenu${items.length>1?'s':''} prévu${items.length>1?'s':''}</b>`;
+
+   if(!items.length){
+     list.innerHTML=`<div class="v57-empty"><b>Votre semaine est encore libre ✨</b><small>Ajoutez un contenu au calendrier pour le retrouver ici.</small></div>`;
+     return;
+   }
+
+   list.innerHTML=items.map(({x,d})=>{
+     const kind=cp37Kind(x);
+     const meta=[x.Reseau||x['Réseau']||'',x.Format||'',x.Public_cible||x.Public||''].filter(Boolean).join(' · ');
+     const local=(D.CALENDRIER||[]).findIndex(y=>
+       String(y.Titre||'')===String(x.Titre||'') &&
+       String(y.Date_publication||'')===String(x.Date_publication||'')
+     );
+     const action=local>=0?`openWeekItem(${local})`:`openPage('calendar')`;
+     return `<button class="v57-week v57-${kind}" onclick="${action}">
+       <span class="v57-date"><small>${dn[d.getDay()]}</small><strong>${d.getDate()}</strong><em>${mn[d.getMonth()]}</em></span>
+       <span class="v57-copy"><strong>${esc2(x.Titre||'Sans titre')}</strong><small>${esc2(meta||x.Univers||'Contenu prévu')}</small></span>
+       <span class="v57-arrow">›</span>
+     </button>`;
+   }).join('');
+ }catch(e){
+   console.error('COMPLICE semaine Grist',e);
+ }
+}
 function renderDash(){
  const cal=rows('CALENDRIER'), pubs=rows('CONTENUS'), forms=rows('FORMATIONS'), ideas=rows('IDEES');
  const now=new Date(); now.setHours(0,0,0,0);
@@ -1078,12 +1133,14 @@ async function refreshInstagramCard(){
   const p=card.querySelector('p'); if(p)p.textContent='Connexion au réseau impossible pour le moment.';
   return false;
  }
+
+ setTimeout(cp59RefreshWeek,40);
 }
 function scheduleInstagramRefresh(){
  [0,800,2200].forEach(ms=>setTimeout(()=>refreshInstagramCard(),ms));
 }
 
-function build(){const old=document.querySelector('.app'); if(!old)return; const pages=[...old.querySelectorAll('.page')]; const shell=document.createElement('div');shell.id='cpShell';shell.innerHTML=`<header class="cp-head"><div class="cp-brand"><img class="cp-logo" src="${LOGO}"><span style="font-size:11px;color:#a58fae;font-weight:800;align-self:flex-end;margin:0 0 20px -10px">V58</span></div><div class="cp-headright"><input class="cp-search" id="cpSearch" placeholder="⌕  Rechercher une formation, un événement…"><div class="cp-social"><a data-social="instagram" title="Instagram">◎ <span>Instagram</span></a><a data-social="facebook" title="Facebook">f <span>Facebook</span></a><a data-social="linkedin" title="LinkedIn">in <span>LinkedIn</span></a></div></div></header><nav class="cp-nav"><button class="active" data-page="home" onclick="openPage('home')"><span class="ico">⌂</span>Accueil</button><button data-page="studio" onclick="openPage('studio')"><span class="ico">✎</span>Créer une publication</button><button data-page="planner" onclick="openPage('planner')"><span class="ico">🧩</span>Exploiter ce que j’ai</button><button data-page="ideas" onclick="openPage('ideas')"><span class="ico">💡</span>Trouver des idées</button><button data-page="calendar" onclick="openPage('calendar')"><span class="ico">▣</span>Mon calendrier</button><button data-page="publications" onclick="openPage('publications')"><span class="ico">▥</span>Mes publications</button><button data-page="settings" onclick="openPage('settings')"><span class="ico">⚙</span>Paramètres</button></nav><main class="cp-wrap"><div id="cpDashboard"></div><div class="cp-workspace" id="cpWorkspace"></div></main>`; document.body.innerHTML='';document.body.appendChild(shell); const ws=document.getElementById('cpWorkspace');pages.forEach(p=>ws.appendChild(p)); const st=document.getElementById('settings'); if(st&&!document.getElementById('cpNetworkConfig')){const box=document.createElement('div');box.id='cpNetworkConfig';box.className='cp-network-config';box.innerHTML='<h3>🌐 Mes réseaux</h3><div class="muted">Renseignez les liens de vos pages. Ils apparaîtront directement en haut de COM’PLICE.</div><div class="cp-network-grid"><label>Instagram<input id="cpIg" placeholder="https://instagram.com/..."></label><label>Facebook<input id="cpFb" placeholder="https://facebook.com/..."></label><label>LinkedIn<input id="cpLi" placeholder="https://linkedin.com/company/..."></label></div><button class="cp-save-net" onclick="saveNetworks()">Enregistrer mes réseaux</button>';st.prepend(box);document.getElementById('cpIg').value=socialUrl('instagram');document.getElementById('cpFb').value=socialUrl('facebook');document.getElementById('cpLi').value=socialUrl('linkedin');} renderDash();setSocials();scheduleInstagramRefresh();
+function build(){const old=document.querySelector('.app'); if(!old)return; const pages=[...old.querySelectorAll('.page')]; const shell=document.createElement('div');shell.id='cpShell';shell.innerHTML=`<header class="cp-head"><div class="cp-brand"><img class="cp-logo" src="${LOGO}"><span style="font-size:11px;color:#a58fae;font-weight:800;align-self:flex-end;margin:0 0 20px -10px">V59</span></div><div class="cp-headright"><input class="cp-search" id="cpSearch" placeholder="⌕  Rechercher une formation, un événement…"><div class="cp-social"><a data-social="instagram" title="Instagram">◎ <span>Instagram</span></a><a data-social="facebook" title="Facebook">f <span>Facebook</span></a><a data-social="linkedin" title="LinkedIn">in <span>LinkedIn</span></a></div></div></header><nav class="cp-nav"><button class="active" data-page="home" onclick="openPage('home')"><span class="ico">⌂</span>Accueil</button><button data-page="studio" onclick="openPage('studio')"><span class="ico">✎</span>Créer une publication</button><button data-page="planner" onclick="openPage('planner')"><span class="ico">🧩</span>Exploiter ce que j’ai</button><button data-page="ideas" onclick="openPage('ideas')"><span class="ico">💡</span>Trouver des idées</button><button data-page="calendar" onclick="openPage('calendar')"><span class="ico">▣</span>Mon calendrier</button><button data-page="publications" onclick="openPage('publications')"><span class="ico">▥</span>Mes publications</button><button data-page="settings" onclick="openPage('settings')"><span class="ico">⚙</span>Paramètres</button></nav><main class="cp-wrap"><div id="cpDashboard"></div><div class="cp-workspace" id="cpWorkspace"></div></main>`; document.body.innerHTML='';document.body.appendChild(shell); const ws=document.getElementById('cpWorkspace');pages.forEach(p=>ws.appendChild(p)); const st=document.getElementById('settings'); if(st&&!document.getElementById('cpNetworkConfig')){const box=document.createElement('div');box.id='cpNetworkConfig';box.className='cp-network-config';box.innerHTML='<h3>🌐 Mes réseaux</h3><div class="muted">Renseignez les liens de vos pages. Ils apparaîtront directement en haut de COM’PLICE.</div><div class="cp-network-grid"><label>Instagram<input id="cpIg" placeholder="https://instagram.com/..."></label><label>Facebook<input id="cpFb" placeholder="https://facebook.com/..."></label><label>LinkedIn<input id="cpLi" placeholder="https://linkedin.com/company/..."></label></div><button class="cp-save-net" onclick="saveNetworks()">Enregistrer mes réseaux</button>';st.prepend(box);document.getElementById('cpIg').value=socialUrl('instagram');document.getElementById('cpFb').value=socialUrl('facebook');document.getElementById('cpLi').value=socialUrl('linkedin');} renderDash();setSocials();scheduleInstagramRefresh();
  const q=document.getElementById('cpSearch');q.addEventListener('keydown',e=>{if(e.key==='Enter'){const term=q.value.trim().toLowerCase();if(!term)return;const f=rows('FORMATIONS').find(x=>JSON.stringify(x).toLowerCase().includes(term));if(f){openPage('formations');return}const c=rows('CONTENUS').find(x=>JSON.stringify(x).toLowerCase().includes(term));if(c){openPage('publications');return}openPage('ideas')}});
  const saveBtn=document.createElement('div');saveBtn.innerHTML='';
  const si=document.getElementById('setInstagram'),sf=document.getElementById('setFacebook'),sl=document.getElementById('setLinkedIn');[[si,'instagram'],[sf,'facebook'],[sl,'linkedin']].forEach(([el,k])=>{if(el){const old=el.value||'';if(!old)el.value=socialUrl(k);el.addEventListener('change',()=>{localStorage.setItem('complice_'+k,el.value.trim());setSocials()})}});
