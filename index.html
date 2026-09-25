@@ -485,7 +485,7 @@ function renderCalendar(){
      ev.map(x=>{
        const kind=cp37Kind(x);
        const sug=/suggest/i.test(String(x.Statut||x.Origine||''));
-       return `<div class="event cp37-${kind} ${sug?'cp37-suggest':''}" style="cursor:pointer" onclick="event.stopPropagation();cp44EditCalendar('${esc(String(x.id||x.id_||''))}')">${x.Signature?'⭐ ':''}<b>${esc(x.Titre||'À préparer')}</b>${esc(x.Public_cible||'')} · ${esc(x.Format||'')}${x.Pourquoi_maintenant?' · '+esc(x.Pourquoi_maintenant):''}${x.Origine?' · '+esc(x.Origine):''}</div>`;
+       return `<div class="event cp37-${kind} ${sug?'cp37-suggest':''}" style="cursor:pointer" onclick="event.stopPropagation();cp45EditCalendar(${(D.CALENDRIER||[]).indexOf(x)})">${x.Signature?'⭐ ':''}<b>${esc(x.Titre||'À préparer')}</b>${esc(x.Public_cible||'')} · ${esc(x.Format||'')}${x.Pourquoi_maintenant?' · '+esc(x.Pourquoi_maintenant):''}${x.Origine?' · '+esc(x.Origine):''}</div>`;
      }).join('')
    }</div>`;
  }
@@ -607,17 +607,24 @@ async function saveEvent(openAI=false){
  }catch(e){console.error(e);msg.textContent='❌ Ajout impossible : '+(e.message||e)}
 }
 
-function cp44FindRecord(id){
- return (D.CALENDRIER||[]).find(x=>String(x.id||x.id_||'')===String(id));
+async function cp45RecordContext(idx){
+ const row=(D.CALENDRIER||[])[Number(idx)];
+ if(!row)throw new Error('Élément du calendrier introuvable');
+ const raw=await grist.docApi.fetchTable(T.CALENDRIER);
+ const rid=raw&&raw.id&&raw.id[Number(idx)];
+ if(rid==null)throw new Error('Identifiant Grist introuvable');
+ return {row,rid:Number(rid)};
 }
-function cp44EditCalendar(id){
- const x=cp44FindRecord(id); if(!x)return;
+async function cp45EditCalendar(idx){
+ let ctx;
+ try{ctx=await cp45RecordContext(idx)}catch(e){alert(e.message||e);return}
+ const x=ctx.row, rid=ctx.rid;
  const m=cp40EnsureModal();
  document.getElementById('cp40Body').innerHTML=`
   <div class="cp40-form">
    <label>Date<input id="eDate" type="date" value="${dateKey(x.Date_publication)||''}"></label>
    <label>Type<select id="eType">
-    ${['Formation longue','Formation courte','Événement / forum / JPO','Autre contenu','Suggestion collègue','Direction','Pour info'].map(v=>`<option ${String(x.Univers||'')===v?'selected':''}>${v==='Suggestion collègue'?'✦':'●'} ${esc(v)}</option>`).join('')}
+    ${['Formation longue','Formation courte','Événement / forum / JPO','Autre contenu','Suggestion collègue','Direction','Pour info'].map(v=>`<option value="${esc(v)}" ${String(x.Univers||'')===v?'selected':''}>${v==='Suggestion collègue'?'✦':'●'} ${esc(v)}</option>`).join('')}
    </select></label>
    <label>Nature / type d’événement<select id="eNature">
     ${['','Formation','Forum / salon','JPO / portes ouvertes','Vie du centre','Entreprise / partenaire','Recrutement / orientation','Réunion / information','Autre'].map(v=>`<option value="${esc(v)}" ${String(x.Pourquoi_maintenant||'')===v?'selected':''}>${esc(v||'À préciser')}</option>`).join('')}
@@ -634,31 +641,41 @@ function cp44EditCalendar(id){
   </div>
   <div id="cp40Msg" class="cp40-msg"></div>
   <div class="cp44-actions">
-   <button class="btn alt" type="button" onclick="cp44Update('${esc(String(id))}',false)">💾 Enregistrer les modifications</button>
-   <button class="btn" type="button" onclick="cp44Update('${esc(String(id))}',true)">✨ Modifier + ouvrir l’IA</button>
-   <button class="cp44-delete" type="button" onclick="cp44Delete('${esc(String(id))}')">🗑 Supprimer</button>
+   <button class="btn alt" type="button" onclick="cp45Update(${Number(idx)},${rid},false)">💾 Enregistrer les modifications</button>
+   <button class="btn" type="button" onclick="cp45Update(${Number(idx)},${rid},true)">✨ Modifier + ouvrir le Studio IA</button>
+   <button class="cp44-delete" type="button" onclick="cp45Delete(${rid})">🗑 Supprimer</button>
   </div>`;
  m.classList.add('show');
 }
-async function cp44Update(id,openAI){
- const msg=document.getElementById('cp40Msg'),x=cp44FindRecord(id);if(!x)return;
+async function cp45Update(idx,rid,openAI){
+ const msg=document.getElementById('cp40Msg');
  const fields={Date_publication:document.getElementById('eDate').value,Titre:document.getElementById('eTitle').value.trim(),Univers:document.getElementById('eType').value,Formation:document.getElementById('eForm').value,Public_cible:document.getElementById('eTarget').value,Format:document.getElementById('eFormat').value,Statut:document.getElementById('eStatus').value,Angle_marketing:document.getElementById('eInfo').value,Pourquoi_maintenant:document.getElementById('eNature').value,Origine:document.getElementById('eAuthor').value||document.getElementById('eType').value};
  if(!fields.Date_publication||!fields.Titre){msg.textContent='⚠️ Date et titre obligatoires.';return}
  try{
-  await grist.docApi.applyUserActions([['UpdateRecord',T.CALENDRIER,Number(id),fields]]);
-  D.CALENDRIER=rows(await grist.docApi.fetchTable(T.CALENDRIER));renderCalendar();try{renderDash()}catch(e){}
+  await grist.docApi.applyUserActions([['UpdateRecord',T.CALENDRIER,Number(rid),fields]]);
+  D.CALENDRIER=rows(await grist.docApi.fetchTable(T.CALENDRIER));
+  try{renderCalendar()}catch(e){} try{renderDash()}catch(e){}
   msg.textContent='✓ Modifications enregistrées.';
-  if(openAI){setTimeout(()=>{cp40Close();openCalendarInStudioById(id)},300)}else setTimeout(cp40Close,300);
+  if(openAI){
+   setTimeout(()=>{
+    cp40Close();openPage('studio');
+    const facts=document.getElementById('aiFacts');
+    if(facts)facts.value=[`Sujet : ${fields.Titre}`,`Date prévue : ${fields.Date_publication}`,fields.Formation?`Formation : ${fields.Formation}`:'',fields.Public_cible?`Public : ${fields.Public_cible}`:'',fields.Format?`Format : ${fields.Format}`:'',fields.Angle_marketing?`Informations : ${fields.Angle_marketing}`:''].filter(Boolean).join('\n');
+    const f=document.getElementById('aiForm');if(f&&fields.Formation){const o=[...f.options].find(o=>o.value===fields.Formation||o.textContent===fields.Formation);if(o)f.value=o.value}
+    const t=document.getElementById('aiTarget');if(t){const o=[...t.options].find(o=>o.value===fields.Public_cible);if(o)t.value=o.value}
+   },300);
+  }else setTimeout(cp40Close,300);
  }catch(e){console.error(e);msg.textContent='❌ Modification impossible : '+(e.message||e)}
 }
-async function cp44Delete(id){
+async function cp45Delete(rid){
  if(!confirm('Supprimer cet élément du calendrier ?'))return;
  const msg=document.getElementById('cp40Msg');
  try{
-  await grist.docApi.applyUserActions([['RemoveRecord',T.CALENDRIER,Number(id)]]);
-  D.CALENDRIER=rows(await grist.docApi.fetchTable(T.CALENDRIER));renderCalendar();try{renderDash()}catch(e){}
+  await grist.docApi.applyUserActions([['RemoveRecord',T.CALENDRIER,Number(rid)]]);
+  D.CALENDRIER=rows(await grist.docApi.fetchTable(T.CALENDRIER));
+  try{renderCalendar()}catch(e){} try{renderDash()}catch(e){}
   cp40Close();
- }catch(e){console.error(e);msg.textContent='❌ Suppression impossible : '+(e.message||e)}
+ }catch(e){console.error(e);if(msg)msg.textContent='❌ Suppression impossible : '+(e.message||e)}
 }
 function openSource(){ $('#modalSave').style.display='';
  $('#modalTitle').textContent='Ajouter une information';$('#modalBody').innerHTML=`<label>Titre</label><input id="sTitle"><label>Type</label><select id="sType"><option>Nouvelle information</option><option>Fiche produit</option><option>Calendrier</option><option>Événement</option></select><label>Informations factuelles</label><textarea id="sInfo"></textarea>`;$('#modalSave').onclick=saveSource;$('#modal').classList.add('show')
@@ -999,7 +1016,7 @@ function scheduleInstagramRefresh(){
  [0,800,2200].forEach(ms=>setTimeout(()=>refreshInstagramCard(),ms));
 }
 
-function build(){const old=document.querySelector('.app'); if(!old)return; const pages=[...old.querySelectorAll('.page')]; const shell=document.createElement('div');shell.id='cpShell';shell.innerHTML=`<header class="cp-head"><div class="cp-brand"><img class="cp-logo" src="${LOGO}"><span style="font-size:11px;color:#a58fae;font-weight:800;align-self:flex-end;margin:0 0 20px -10px">V44</span></div><div class="cp-headright"><input class="cp-search" id="cpSearch" placeholder="⌕  Rechercher une formation, un événement…"><div class="cp-social"><a data-social="instagram" title="Instagram">◎ <span>Instagram</span></a><a data-social="facebook" title="Facebook">f <span>Facebook</span></a><a data-social="linkedin" title="LinkedIn">in <span>LinkedIn</span></a></div></div></header><nav class="cp-nav"><button class="active" data-page="home" onclick="openPage('home')"><span class="ico">⌂</span>Accueil</button><button data-page="studio" onclick="openPage('studio')"><span class="ico">✎</span>Créer une publication</button><button data-page="planner" onclick="openPage('planner')"><span class="ico">🧩</span>Exploiter ce que j’ai</button><button data-page="ideas" onclick="openPage('ideas')"><span class="ico">💡</span>Trouver des idées</button><button data-page="calendar" onclick="openPage('calendar')"><span class="ico">▣</span>Mon calendrier</button><button data-page="publications" onclick="openPage('publications')"><span class="ico">▥</span>Mes publications</button><button data-page="settings" onclick="openPage('settings')"><span class="ico">⚙</span>Paramètres</button></nav><main class="cp-wrap"><div id="cpDashboard"></div><div class="cp-workspace" id="cpWorkspace"></div></main>`; document.body.innerHTML='';document.body.appendChild(shell); const ws=document.getElementById('cpWorkspace');pages.forEach(p=>ws.appendChild(p)); const st=document.getElementById('settings'); if(st&&!document.getElementById('cpNetworkConfig')){const box=document.createElement('div');box.id='cpNetworkConfig';box.className='cp-network-config';box.innerHTML='<h3>🌐 Mes réseaux</h3><div class="muted">Renseignez les liens de vos pages. Ils apparaîtront directement en haut de COM’PLICE.</div><div class="cp-network-grid"><label>Instagram<input id="cpIg" placeholder="https://instagram.com/..."></label><label>Facebook<input id="cpFb" placeholder="https://facebook.com/..."></label><label>LinkedIn<input id="cpLi" placeholder="https://linkedin.com/company/..."></label></div><button class="cp-save-net" onclick="saveNetworks()">Enregistrer mes réseaux</button>';st.prepend(box);document.getElementById('cpIg').value=socialUrl('instagram');document.getElementById('cpFb').value=socialUrl('facebook');document.getElementById('cpLi').value=socialUrl('linkedin');} renderDash();setSocials();scheduleInstagramRefresh();
+function build(){const old=document.querySelector('.app'); if(!old)return; const pages=[...old.querySelectorAll('.page')]; const shell=document.createElement('div');shell.id='cpShell';shell.innerHTML=`<header class="cp-head"><div class="cp-brand"><img class="cp-logo" src="${LOGO}"><span style="font-size:11px;color:#a58fae;font-weight:800;align-self:flex-end;margin:0 0 20px -10px">V45</span></div><div class="cp-headright"><input class="cp-search" id="cpSearch" placeholder="⌕  Rechercher une formation, un événement…"><div class="cp-social"><a data-social="instagram" title="Instagram">◎ <span>Instagram</span></a><a data-social="facebook" title="Facebook">f <span>Facebook</span></a><a data-social="linkedin" title="LinkedIn">in <span>LinkedIn</span></a></div></div></header><nav class="cp-nav"><button class="active" data-page="home" onclick="openPage('home')"><span class="ico">⌂</span>Accueil</button><button data-page="studio" onclick="openPage('studio')"><span class="ico">✎</span>Créer une publication</button><button data-page="planner" onclick="openPage('planner')"><span class="ico">🧩</span>Exploiter ce que j’ai</button><button data-page="ideas" onclick="openPage('ideas')"><span class="ico">💡</span>Trouver des idées</button><button data-page="calendar" onclick="openPage('calendar')"><span class="ico">▣</span>Mon calendrier</button><button data-page="publications" onclick="openPage('publications')"><span class="ico">▥</span>Mes publications</button><button data-page="settings" onclick="openPage('settings')"><span class="ico">⚙</span>Paramètres</button></nav><main class="cp-wrap"><div id="cpDashboard"></div><div class="cp-workspace" id="cpWorkspace"></div></main>`; document.body.innerHTML='';document.body.appendChild(shell); const ws=document.getElementById('cpWorkspace');pages.forEach(p=>ws.appendChild(p)); const st=document.getElementById('settings'); if(st&&!document.getElementById('cpNetworkConfig')){const box=document.createElement('div');box.id='cpNetworkConfig';box.className='cp-network-config';box.innerHTML='<h3>🌐 Mes réseaux</h3><div class="muted">Renseignez les liens de vos pages. Ils apparaîtront directement en haut de COM’PLICE.</div><div class="cp-network-grid"><label>Instagram<input id="cpIg" placeholder="https://instagram.com/..."></label><label>Facebook<input id="cpFb" placeholder="https://facebook.com/..."></label><label>LinkedIn<input id="cpLi" placeholder="https://linkedin.com/company/..."></label></div><button class="cp-save-net" onclick="saveNetworks()">Enregistrer mes réseaux</button>';st.prepend(box);document.getElementById('cpIg').value=socialUrl('instagram');document.getElementById('cpFb').value=socialUrl('facebook');document.getElementById('cpLi').value=socialUrl('linkedin');} renderDash();setSocials();scheduleInstagramRefresh();
  const q=document.getElementById('cpSearch');q.addEventListener('keydown',e=>{if(e.key==='Enter'){const term=q.value.trim().toLowerCase();if(!term)return;const f=rows('FORMATIONS').find(x=>JSON.stringify(x).toLowerCase().includes(term));if(f){openPage('formations');return}const c=rows('CONTENUS').find(x=>JSON.stringify(x).toLowerCase().includes(term));if(c){openPage('publications');return}openPage('ideas')}});
  const saveBtn=document.createElement('div');saveBtn.innerHTML='';
  const si=document.getElementById('setInstagram'),sf=document.getElementById('setFacebook'),sl=document.getElementById('setLinkedIn');[[si,'instagram'],[sf,'facebook'],[sl,'linkedin']].forEach(([el,k])=>{if(el){const old=el.value||'';if(!old)el.value=socialUrl(k);el.addEventListener('change',()=>{localStorage.setItem('complice_'+k,el.value.trim());setSocials()})}});
