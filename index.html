@@ -192,6 +192,16 @@ body{background:
 .cp37-choice button{flex:1;min-width:190px}
 .cp37-note{background:#f8f1ff;border-radius:12px;padding:10px 12px;margin-top:12px;font-size:11px}
 
+
+/* ===== V40 correctifs ciblés ===== */
+.cp40-modal{position:fixed;inset:0;background:rgba(52,37,57,.35);display:none;align-items:center;justify-content:center;z-index:99999;padding:18px}
+.cp40-modal.show{display:flex}.cp40-box{width:min(720px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:24px;padding:20px;box-shadow:0 25px 70px rgba(50,30,55,.22)}
+.cp40-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.cp40-head h3{margin:0}.cp40-x{border:0;background:#f5edf3;border-radius:50%;width:34px;height:34px;font-size:20px;cursor:pointer}
+.cp40-form{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:15px}.cp40-form label{display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:850;color:#64596a}.cp40-form .wide{grid-column:1/-1}.cp40-form input,.cp40-form select,.cp40-form textarea{width:100%;box-sizing:border-box;border:1px solid #e5dbe3;border-radius:12px;padding:10px;font:inherit;background:#fff}.cp40-form textarea{min-height:90px;resize:vertical}.cp40-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}.cp40-actions button{flex:1;min-width:210px}.cp40-msg{font-size:11px;font-weight:800;margin-top:10px;min-height:16px}
+.cp-action.orange{min-width:0}.cp-action.orange>span:nth-child(2){min-width:0;max-width:100%;overflow:visible}.cp-action.orange h3,.cp-action.orange p{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;max-height:none!important;-webkit-line-clamp:unset!important;line-clamp:unset!important;overflow-wrap:anywhere}.cp-action.orange p{font-size:11px!important;line-height:1.32!important;margin-bottom:0!important}
+.cp-week-strip{align-items:stretch}.cp-week-day{height:auto!important;min-height:108px!important;overflow:visible!important}.cp-week-event{white-space:normal!important;height:auto!important;max-height:none!important;overflow:visible!important}
+@media(max-width:700px){.cp40-form{grid-template-columns:1fr}.cp40-form .wide{grid-column:auto}}
+
 </style>
 <style id="v21Exact">
 html,body{background:#fffafd!important;color:#373452!important;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif!important}body{margin:0!important}.app{display:block!important;min-height:100vh!important}.side{display:none!important}.main{padding:0!important;max-width:none!important}.top{display:none!important}.page{display:none!important}.page.active{display:block!important}
@@ -497,72 +507,58 @@ async function generateMonth(){
  if(!actions.length)return alert('Le mois contient déjà suffisamment de propositions.');
  try{await grist.docApi.applyUserActions(actions);D.CALENDRIER=rows(await grist.docApi.fetchTable(T.CALENDRIER));renderCalendar();$('#calNotice').innerHTML=`<div class="notice ok">✓ ${actions.length} propositions ajoutées au calendrier Grist.</div>`}catch(e){alert('Impossible d’écrire dans CALENDRIER. Vérifiez que le widget a bien Accès complet au document.');console.error(e)}
 }
-function openEvent(prefillDate=''){
- $('#modalTitle').textContent='Ajouter au calendrier';
- $('#modalBody').innerHTML=`
-   <label>Date</label><input id="eDate" type="date" value="${esc(prefillDate||'')}">
-   <label>Type</label><select id="eType">
-     <option>Formation longue</option><option>Formation courte</option>
-     <option>Événement / forum / JPO</option><option>Actualité du centre</option>
-     <option>Idée de publication</option><option>Autre contenu</option>
-   </select>
-   <label>Titre / sujet</label><input id="eTitle" placeholder="Ex. Forum de l’orientation à Rodez">
-   <label>Formation liée (facultatif)</label><select id="eForm"><option value="">Aucune</option>${(D.FORMATIONS||[]).map(x=>`<option>${esc(x.Intitule)}</option>`).join('')}</select>
-   <label>Public</label><select id="eTarget"><option>Jeunes</option><option>Parents</option><option>Entreprises</option><option>Professionnels</option><option>Prescripteurs / partenaires</option><option>Tous publics</option></select>
-   <label>Format</label><select id="eFormat"><option value="">À définir</option><option>Reel</option><option>Carrousel</option><option>Interview</option><option>Photo + texte</option><option>Quiz</option><option>Story</option></select>
-   <label>Statut</label><select id="eStatus"><option>À préparer</option><option>Suggestion collègue</option><option>Validé</option></select>
-   <label>Informations à intégrer</label><textarea id="eInfo" placeholder="Lieu, horaires, ce qui s’est passé, photos/vidéos disponibles…"></textarea>
-   <div class="cp37-note"><b>IA facultative :</b> vous pouvez enregistrer uniquement dans le calendrier ou enregistrer puis préparer la publication dans le Studio IA.</div>
-   <div class="cp37-choice">
-     <button class="btn alt" type="button" onclick="saveEvent(false)">💾 Ajouter au calendrier</button>
-     <button class="btn" type="button" onclick="saveEvent(true)">✨ Ajouter + ouvrir l’IA</button>
-   </div>`;
- $('#modalSave').style.display='none';
- $('#modal').classList.add('show');
+function cp40EnsureModal(){
+ let m=document.getElementById('cp40Modal');
+ if(m)return m;
+ m=document.createElement('div');
+ m.id='cp40Modal';m.className='cp40-modal';
+ m.innerHTML=`<div class="cp40-box">
+   <div class="cp40-head"><div><h3>Ajouter au calendrier</h3><div class="muted">L’IA est facultative.</div></div><button type="button" class="cp40-x" onclick="cp40Close()">×</button></div>
+   <div id="cp40Body"></div>
+ </div>`;
+ document.body.appendChild(m);return m;
 }
+function openEvent(prefillDate=''){
+ const m=cp40EnsureModal();
+ document.getElementById('cp40Body').innerHTML=`
+   <div class="cp40-form">
+    <label>Date<input id="eDate" type="date" value="${esc(prefillDate||'')}"></label>
+    <label>Type<select id="eType"><option>Formation longue</option><option>Formation courte</option><option>Événement / forum / JPO</option><option>Actualité du centre</option><option>Idée de publication</option><option>Autre contenu</option></select></label>
+    <label class="wide">Titre / sujet<input id="eTitle" placeholder="Ex. Forum de l’orientation à Rodez"></label>
+    <label>Formation liée<select id="eForm"><option value="">Aucune</option>${(D.FORMATIONS||[]).map(x=>`<option>${esc(x.Intitule)}</option>`).join('')}</select></label>
+    <label>Public<select id="eTarget"><option>Jeunes</option><option>Parents</option><option>Entreprises</option><option>Professionnels</option><option>Prescripteurs / partenaires</option><option>Tous publics</option></select></label>
+    <label>Format<select id="eFormat"><option value="">À définir</option><option>Reel</option><option>Carrousel</option><option>Interview</option><option>Photo + texte</option><option>Quiz</option><option>Story</option></select></label>
+    <label>Statut<select id="eStatus"><option>À préparer</option><option>Suggestion collègue</option><option>Validé</option></select></label>
+    <label class="wide">Informations à intégrer<textarea id="eInfo" placeholder="Lieu, horaires, faits, photos/vidéos disponibles…"></textarea></label>
+   </div>
+   <div id="cp40Msg" class="cp40-msg"></div>
+   <div class="cp40-actions"><button class="btn alt" type="button" onclick="saveEvent(false)">💾 Ajouter au calendrier</button><button class="btn" type="button" onclick="saveEvent(true)">✨ Ajouter + ouvrir l’IA</button></div>`;
+ m.classList.add('show');
+}
+function cp40Close(){document.getElementById('cp40Modal')?.classList.remove('show')}
 async function saveEvent(openAI=false){
- const vals={
-   Date_publication:$('#eDate').value,
-   Titre:$('#eTitle').value.trim(),
-   Univers:$('#eType').value,
-   Formation:$('#eForm').value,
-   Public_cible:$('#eTarget').value,
-   Format:$('#eFormat').value,
-   Objectif:'',
-   Statut:$('#eStatus').value,
-   Angle_marketing:$('#eInfo').value,
-   Pourquoi_maintenant:'',
-   A_prevoir:'',
-   Signature:false,
-   Origine:$('#eStatus').value==='Suggestion collègue'?'Suggestion collègue':'Manuel COM’PLICE'
- };
- if(!vals.Date_publication||!vals.Titre)return alert('Date et titre sont obligatoires.');
+ const msg=document.getElementById('cp40Msg');
+ const vals={Date_publication:document.getElementById('eDate').value,Titre:document.getElementById('eTitle').value.trim(),Univers:document.getElementById('eType').value,Formation:document.getElementById('eForm').value,Public_cible:document.getElementById('eTarget').value,Format:document.getElementById('eFormat').value,Objectif:'',Statut:document.getElementById('eStatus').value,Angle_marketing:document.getElementById('eInfo').value,Pourquoi_maintenant:'',A_prevoir:'',Signature:false,Origine:document.getElementById('eStatus').value==='Suggestion collègue'?'Suggestion collègue':'Manuel COM’PLICE'};
+ if(!vals.Date_publication||!vals.Titre){msg.textContent='⚠️ La date et le titre sont obligatoires.';return}
+ if(!T||!T.CALENDRIER){msg.textContent='⚠️ Table CALENDRIER introuvable.';return}
+ msg.textContent='Enregistrement…';
  try{
    await grist.docApi.applyUserActions([['AddRecord',T.CALENDRIER,null,vals]]);
    D.CALENDRIER=rows(await grist.docApi.fetchTable(T.CALENDRIER));
-   closeModal();
-   $('#modalSave').style.display='';
+   msg.textContent='✓ Ajouté au calendrier.';
    renderCalendar();
+   if(typeof renderDash==='function')renderDash();
+   setTimeout(()=>cp40Close(),350);
    if(openAI){
-     go('studio');
-     const universe=$('#aiUniverse');
-     if(universe){
-       if(vals.Univers==='Formation longue')universe.value='Formation longue';
-       else if(vals.Univers==='Formation courte')universe.value='Formation courte';
-       else universe.value='Vie du centre';
-       fillAiForms();
-     }
-     const form=$('#aiForm');
-     if(form&&vals.Formation){const opt=[...form.options].find(o=>o.value===vals.Formation||o.textContent===vals.Formation);if(opt)form.value=opt.value}
-     const target=$('#aiTarget');
-     if(target){const opt=[...target.options].find(o=>o.value===vals.Public_cible);if(opt)target.value=opt.value}
-     const facts=$('#aiFacts');
-     if(facts)facts.value=[`Sujet : ${vals.Titre}`,`Date prévue : ${vals.Date_publication}`,vals.Angle_marketing?`Informations : ${vals.Angle_marketing}`:''].filter(Boolean).join('\\n');
+     setTimeout(()=>{
+       openPage('studio');
+       const facts=document.getElementById('aiFacts');
+       if(facts)facts.value=[`Sujet : ${vals.Titre}`,`Date prévue : ${vals.Date_publication}`,vals.Formation?`Formation : ${vals.Formation}`:'',vals.Public_cible?`Public : ${vals.Public_cible}`:'',vals.Format?`Format : ${vals.Format}`:'',vals.Angle_marketing?`Informations : ${vals.Angle_marketing}`:''].filter(Boolean).join('\n');
+       const f=document.getElementById('aiForm');if(f&&vals.Formation){const o=[...f.options].find(o=>o.value===vals.Formation||o.textContent===vals.Formation);if(o)f.value=o.value}
+       const t=document.getElementById('aiTarget');if(t){const o=[...t.options].find(o=>o.value===vals.Public_cible);if(o)t.value=o.value}
+     },420);
    }
- }catch(e){
-   console.error(e);
-   alert("Impossible d'ajouter au calendrier. Vérifiez l'accès complet du widget Grist.");
- }
+ }catch(e){console.error(e);msg.textContent='❌ Ajout impossible : '+(e.message||e)}
 }
 function openSource(){ $('#modalSave').style.display='';
  $('#modalTitle').textContent='Ajouter une information';$('#modalBody').innerHTML=`<label>Titre</label><input id="sTitle"><label>Type</label><select id="sType"><option>Nouvelle information</option><option>Fiche produit</option><option>Calendrier</option><option>Événement</option></select><label>Informations factuelles</label><textarea id="sInfo"></textarea>`;$('#modalSave').onclick=saveSource;$('#modal').classList.add('show')
@@ -836,12 +832,13 @@ function renderDash(){
  const networkPost=(name)=>{const all=pubs.filter(x=>String(val(x,'Reseau','Réseau','Public_cible')||'').toLowerCase().includes(name.toLowerCase()));const pub=all.filter(x=>/publi|valid|prêt|pret/i.test(String(val(x,'Statut')||'')));const arr=(pub.length?pub:all).slice().sort((a,b)=>new Date(val(b,'Date_publication','Date_creation')||0)-new Date(val(a,'Date_publication','Date_creation')||0));return arr[0]||null};
  const postLink=(x,network)=>{if(x){for(const k of ['Lien_publication','URL_publication','Lien','URL','Permalink','Lien_post','Post_URL']){const u=x[k];if(typeof u==='string'&&/^https?:\/\//i.test(u.trim()))return u.trim()}}return socialUrl(network.toLowerCase())||'#'};
  const netCards=['Instagram','Facebook','LinkedIn'].map(n=>({name:n,post:networkPost(n)}));
- const horizonEnd=new Date(now); horizonEnd.setDate(now.getDate()+6); horizonEnd.setHours(23,59,59,999);
- const dayNames=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+ const dayNames=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
  const weekStrip=Array.from({length:7},(_,offset)=>{
-   const d=new Date(now); d.setDate(now.getDate()+offset);
-   const events=datedCal.filter(o=>o.d>=new Date(d.getFullYear(),d.getMonth(),d.getDate())&&o.d<=new Date(d.getFullYear(),d.getMonth(),d.getDate(),23,59,59,999)&&!/publi/i.test(String(val(o.x,'Statut')||'')));
-   return `<div class="cp-week-day ${offset===0?'is-today':''}"><div class="cp-week-name">${offset===0?"Aujourd’hui":dayNames[d.getDay()]}</div><div class="cp-week-num">${d.getDate()}</div>${events.length?events.map(o=>{const idx=cal.indexOf(o.x);return `<button class="cp-week-event ${cpCategoryClass(o.x)}" onclick="openWeekItem(${idx})"><b>${esc2(val(o.x,'Titre','Formation')||'Publication')}</b><span>${esc2(cpCategoryLabel(o.x))} · ${esc2(val(o.x,'Format')||val(o.x,'Public_cible')||'À préparer')}</span></button>`}).join(''):'<div class="cp-week-none">·</div>'}</div>`;
+   const d=new Date(weekStart); d.setDate(weekStart.getDate()+offset);
+   const dayStart=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+   const dayEnd=new Date(d.getFullYear(),d.getMonth(),d.getDate(),23,59,59,999);
+   const events=datedCal.filter(o=>o.d>=dayStart&&o.d<=dayEnd);
+   return `<div class="cp-week-day ${d.toDateString()===now.toDateString()?'is-today':''}"><div class="cp-week-name">${dayNames[offset]}</div><div class="cp-week-num">${d.getDate()}</div>${events.length?events.map(o=>{const idx=cal.indexOf(o.x);return `<button class="cp-week-event ${cpCategoryClass(o.x)}" onclick="openWeekItem(${idx})"><b>${esc2(val(o.x,'Titre','Formation')||'Élément du calendrier')}</b><span>${esc2(cpCategoryLabel(o.x))}${val(o.x,'Statut')?' · '+esc2(val(o.x,'Statut')):''}</span></button>`}).join(''):'<div class="cp-week-none">Rien de prévu</div>'}</div>`;
  }).join('');
  const formTitle=val(nextForm,'Intitule','Formation','Titre')||'Une formation à mettre en lumière'; const ideaTitle=val(idea,'Concept','Titre')||'Une nouvelle idée à explorer';
  const formImg=imageOf(nextForm), ideaImg=imageOf(idea);
@@ -902,7 +899,7 @@ function scheduleInstagramRefresh(){
  [0,800,2200].forEach(ms=>setTimeout(()=>refreshInstagramCard(),ms));
 }
 
-function build(){const old=document.querySelector('.app'); if(!old)return; const pages=[...old.querySelectorAll('.page')]; const shell=document.createElement('div');shell.id='cpShell';shell.innerHTML=`<header class="cp-head"><div class="cp-brand"><img class="cp-logo" src="${LOGO}"><span style="font-size:11px;color:#a58fae;font-weight:800;align-self:flex-end;margin:0 0 20px -10px">V33</span></div><div class="cp-headright"><input class="cp-search" id="cpSearch" placeholder="⌕  Rechercher une formation, un événement…"><div class="cp-social"><a data-social="instagram" title="Instagram">◎ <span>Instagram</span></a><a data-social="facebook" title="Facebook">f <span>Facebook</span></a><a data-social="linkedin" title="LinkedIn">in <span>LinkedIn</span></a></div></div></header><nav class="cp-nav"><button class="active" data-page="home" onclick="openPage('home')"><span class="ico">⌂</span>Accueil</button><button data-page="studio" onclick="openPage('studio')"><span class="ico">✎</span>Créer une publication</button><button data-page="planner" onclick="openPage('planner')"><span class="ico">🧩</span>Exploiter ce que j’ai</button><button data-page="ideas" onclick="openPage('ideas')"><span class="ico">💡</span>Trouver des idées</button><button data-page="calendar" onclick="openPage('calendar')"><span class="ico">▣</span>Mon calendrier</button><button data-page="publications" onclick="openPage('publications')"><span class="ico">▥</span>Mes publications</button><button data-page="settings" onclick="openPage('settings')"><span class="ico">⚙</span>Paramètres</button></nav><main class="cp-wrap"><div id="cpDashboard"></div><div class="cp-workspace" id="cpWorkspace"></div></main>`; document.body.innerHTML='';document.body.appendChild(shell); const ws=document.getElementById('cpWorkspace');pages.forEach(p=>ws.appendChild(p)); const st=document.getElementById('settings'); if(st&&!document.getElementById('cpNetworkConfig')){const box=document.createElement('div');box.id='cpNetworkConfig';box.className='cp-network-config';box.innerHTML='<h3>🌐 Mes réseaux</h3><div class="muted">Renseignez les liens de vos pages. Ils apparaîtront directement en haut de COM’PLICE.</div><div class="cp-network-grid"><label>Instagram<input id="cpIg" placeholder="https://instagram.com/..."></label><label>Facebook<input id="cpFb" placeholder="https://facebook.com/..."></label><label>LinkedIn<input id="cpLi" placeholder="https://linkedin.com/company/..."></label></div><button class="cp-save-net" onclick="saveNetworks()">Enregistrer mes réseaux</button>';st.prepend(box);document.getElementById('cpIg').value=socialUrl('instagram');document.getElementById('cpFb').value=socialUrl('facebook');document.getElementById('cpLi').value=socialUrl('linkedin');} renderDash();setSocials();scheduleInstagramRefresh();
+function build(){const old=document.querySelector('.app'); if(!old)return; const pages=[...old.querySelectorAll('.page')]; const shell=document.createElement('div');shell.id='cpShell';shell.innerHTML=`<header class="cp-head"><div class="cp-brand"><img class="cp-logo" src="${LOGO}"><span style="font-size:11px;color:#a58fae;font-weight:800;align-self:flex-end;margin:0 0 20px -10px">V40</span></div><div class="cp-headright"><input class="cp-search" id="cpSearch" placeholder="⌕  Rechercher une formation, un événement…"><div class="cp-social"><a data-social="instagram" title="Instagram">◎ <span>Instagram</span></a><a data-social="facebook" title="Facebook">f <span>Facebook</span></a><a data-social="linkedin" title="LinkedIn">in <span>LinkedIn</span></a></div></div></header><nav class="cp-nav"><button class="active" data-page="home" onclick="openPage('home')"><span class="ico">⌂</span>Accueil</button><button data-page="studio" onclick="openPage('studio')"><span class="ico">✎</span>Créer une publication</button><button data-page="planner" onclick="openPage('planner')"><span class="ico">🧩</span>Exploiter ce que j’ai</button><button data-page="ideas" onclick="openPage('ideas')"><span class="ico">💡</span>Trouver des idées</button><button data-page="calendar" onclick="openPage('calendar')"><span class="ico">▣</span>Mon calendrier</button><button data-page="publications" onclick="openPage('publications')"><span class="ico">▥</span>Mes publications</button><button data-page="settings" onclick="openPage('settings')"><span class="ico">⚙</span>Paramètres</button></nav><main class="cp-wrap"><div id="cpDashboard"></div><div class="cp-workspace" id="cpWorkspace"></div></main>`; document.body.innerHTML='';document.body.appendChild(shell); const ws=document.getElementById('cpWorkspace');pages.forEach(p=>ws.appendChild(p)); const st=document.getElementById('settings'); if(st&&!document.getElementById('cpNetworkConfig')){const box=document.createElement('div');box.id='cpNetworkConfig';box.className='cp-network-config';box.innerHTML='<h3>🌐 Mes réseaux</h3><div class="muted">Renseignez les liens de vos pages. Ils apparaîtront directement en haut de COM’PLICE.</div><div class="cp-network-grid"><label>Instagram<input id="cpIg" placeholder="https://instagram.com/..."></label><label>Facebook<input id="cpFb" placeholder="https://facebook.com/..."></label><label>LinkedIn<input id="cpLi" placeholder="https://linkedin.com/company/..."></label></div><button class="cp-save-net" onclick="saveNetworks()">Enregistrer mes réseaux</button>';st.prepend(box);document.getElementById('cpIg').value=socialUrl('instagram');document.getElementById('cpFb').value=socialUrl('facebook');document.getElementById('cpLi').value=socialUrl('linkedin');} renderDash();setSocials();scheduleInstagramRefresh();
  const q=document.getElementById('cpSearch');q.addEventListener('keydown',e=>{if(e.key==='Enter'){const term=q.value.trim().toLowerCase();if(!term)return;const f=rows('FORMATIONS').find(x=>JSON.stringify(x).toLowerCase().includes(term));if(f){openPage('formations');return}const c=rows('CONTENUS').find(x=>JSON.stringify(x).toLowerCase().includes(term));if(c){openPage('publications');return}openPage('ideas')}});
  const saveBtn=document.createElement('div');saveBtn.innerHTML='';
  const si=document.getElementById('setInstagram'),sf=document.getElementById('setFacebook'),sl=document.getElementById('setLinkedIn');[[si,'instagram'],[sf,'facebook'],[sl,'linkedin']].forEach(([el,k])=>{if(el){const old=el.value||'';if(!old)el.value=socialUrl(k);el.addEventListener('change',()=>{localStorage.setItem('complice_'+k,el.value.trim());setSocials()})}});
