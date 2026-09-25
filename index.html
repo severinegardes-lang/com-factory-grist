@@ -176,12 +176,21 @@ body{background:
 @media(max-width:800px){.cp-week-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 
-/* V36 — PATCH CALENDRIER UNIQUEMENT. Interface V33 intacte. */
-.cp36-legend{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 14px}.cp36-lg{font-size:10px;font-weight:850;padding:6px 9px;border-radius:999px}.cp36-lg.long{background:#eeeaff;color:#6656ad}.cp36-lg.short{background:#fff0e8;color:#b86643}.cp36-lg.event{background:#e8f7f1;color:#397c67}.cp36-lg.other{background:#faeaf1;color:#9a5575}.cp36-lg.suggest{background:#fff6cf;color:#806519}
-.cp36-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}.cp36-dow{text-align:center;font-size:10px;font-weight:900;color:#8b7f8d;padding:5px}.cp36-day{min-height:125px;border:1px solid #eee4ed;border-radius:14px;background:#fff;padding:7px;cursor:pointer;min-width:0}.cp36-day:hover{border-color:#d8b8ca}.cp36-day.off{opacity:.35}.cp36-day.today{outline:2px solid #f1b7cb;background:#fff9fb}.cp36-num{font-size:12px;font-weight:900}.cp36-empty{text-align:center;color:#c2b7c0;font-size:9px;margin-top:22px}
-.cp36-evt{display:block;width:100%;border:0;border-left:4px solid var(--cc,#cc7fa2);background:var(--cb,#faeaf1);border-radius:9px;padding:6px;margin:4px 0;text-align:left;cursor:pointer;font:inherit}.cp36-evt b{display:block;font-size:10px;line-height:1.2;white-space:normal;overflow-wrap:anywhere}.cp36-evt small{font-size:8px;color:#756b78}.cp36-evt.long{--cc:#8d7bd8;--cb:#eeeaff}.cp36-evt.short{--cc:#e98e66;--cb:#fff0e8}.cp36-evt.event{--cc:#58a78c;--cb:#e8f7f1}.cp36-evt.other{--cc:#cc7fa2;--cb:#faeaf1}.cp36-evt.suggest{box-shadow:inset 0 0 0 1px #e5ca62}
-#cp36Modal .cp-modal-box{width:min(660px,96vw)}.cp36-ai{background:#f7f0ff;border-radius:13px;padding:11px;font-size:11px;margin-top:10px}.cp36-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}.cp36-buttons button{flex:1;min-width:190px}
-@media(max-width:850px){.cp36-calendar{grid-template-columns:repeat(7,minmax(100px,1fr));overflow-x:auto}}
+/* V37 — calendrier uniquement, interface V33 inchangée */
+.cp37-legend{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px}
+.cp37-legend span{font-size:10px;font-weight:850;padding:6px 10px;border-radius:999px}
+.cp37-legend .long{background:#eeeaff;color:#6656ad}.cp37-legend .short{background:#fff0e8;color:#b86643}
+.cp37-legend .event{background:#e8f7f1;color:#397c67}.cp37-legend .other{background:#faeaf1;color:#9a5575}
+.cp37-legend .suggest{background:#fff6cf;color:#806519}
+#cal .day{cursor:pointer}
+#cal .event.cp37-long{border-left:4px solid #8d7bd8;background:#eeeaff}
+#cal .event.cp37-short{border-left:4px solid #e98e66;background:#fff0e8}
+#cal .event.cp37-event{border-left:4px solid #58a78c;background:#e8f7f1}
+#cal .event.cp37-other{border-left:4px solid #cc7fa2;background:#faeaf1}
+#cal .event.cp37-suggest{box-shadow:inset 0 0 0 1px #e5ca62}
+.cp37-choice{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.cp37-choice button{flex:1;min-width:190px}
+.cp37-note{background:#f8f1ff;border-radius:12px;padding:10px 12px;margin-top:12px;font-size:11px}
 
 </style>
 <style id="v21Exact">
@@ -222,31 +231,23 @@ html,body{background:#fffafd!important;color:#373452!important;font-family:Inter
 </section>
 
 <section id="calendar" class="page">
-  <div class="page-hero-small">
-    <span>CALENDRIER ÉDITORIAL</span>
-    <h2>📅 Calendrier COM’PLICE</h2>
-    <p>Visualisez les communications prévues et ajoutez un élément à la date de votre choix.</p>
-  </div>
-  <div class="card" style="margin-bottom:14px">
-    <div class="toolbar" style="justify-content:space-between">
-      <div class="toolbar">
-        <button class="btn alt" type="button" onclick="cp36Move(-1)">←</button>
-        <button class="btn alt" type="button" onclick="cp36Today()">Aujourd’hui</button>
-        <button class="btn alt" type="button" onclick="cp36Move(1)">→</button>
-      </div>
-      <button class="btn" type="button" onclick="cp36OpenAdd()">＋ Ajouter</button>
-    </div>
-    <div class="cp36-legend">
-      <span class="cp36-lg long">Formation longue</span>
-      <span class="cp36-lg short">Formation courte</span>
-      <span class="cp36-lg event">Événement / forum / JPO</span>
-      <span class="cp36-lg other">Autre</span>
-      <span class="cp36-lg suggest">Suggestion collègue</span>
-    </div>
-    <h3 id="cp36Month" style="text-transform:capitalize"></h3>
-    <div id="cp36Calendar" class="cp36-calendar"></div>
-    <div class="muted" style="margin-top:10px">Cliquez sur une journée pour ajouter. Cliquez sur un contenu existant pour le préparer dans le Studio IA.</div>
-  </div>
+<div class="toolbar">
+  <button class="btn alt" onclick="shiftMonth(-1)">←</button>
+  <b id="monthLabel"></b>
+  <button class="btn alt" onclick="shiftMonth(1)">→</button>
+  <button class="btn" onclick="generateMonth()">✨ Générer ce mois</button>
+  <button class="btn alt" onclick="openEvent()">+ Ajouter</button>
+</div>
+<div id="calNotice"></div>
+<div class="cp37-legend">
+  <span class="long">● Formation longue</span>
+  <span class="short">● Formation courte</span>
+  <span class="event">● Événement / forum / JPO</span>
+  <span class="other">● Autre contenu</span>
+  <span class="suggest">✦ Suggestion collègue</span>
+</div>
+<div id="cal" class="calendar"></div>
+<div class="muted" style="margin-top:10px">Cliquez sur une journée vide pour ajouter un élément. Cliquez sur un élément existant pour le préparer avec l’IA.</div>
 </section>
 
 <section id="planner" class="page">
@@ -417,13 +418,32 @@ function bindCalendarDayClicks(){
  });
 }
 
+function cp37Kind(x){
+ const h=[x.Univers,x.Formation,x.Titre,x.Origine].filter(Boolean).join(' ').toLowerCase();
+ if(/forum|salon|jpo|portes ouvertes|événement|evenement|job dating/.test(h))return'event';
+ if(/formation courte|courte/.test(h))return'short';
+ if(/formation longue|capa|bac pro|btsa|licence|apprentissage/.test(h))return'long';
+ return'other';
+}
 function renderCalendar(){
- const names=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];let h=names.map(x=>`<div class="dow">${x}</div>`).join('');
+ const names=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+ let h=names.map(x=>`<div class="dow">${x}</div>`).join('');
  const y=viewDate.getFullYear(),m=viewDate.getMonth(),first=(new Date(y,m,1).getDay()+6)%7,days=new Date(y,m+1,0).getDate();
  $('#monthLabel').textContent=new Intl.DateTimeFormat('fr-FR',{month:'long',year:'numeric'}).format(viewDate);
  for(let i=0;i<first;i++)h+='<div class="day off"></div>';
- for(let d=1;d<=days;d++){const ev=monthEvents().filter(x=>dateVal(x.Date_publication)?.getDate()===d);h+=`<div class="day"><div class="num">${d}</div>${ev.map(x=>`<div class="event" style="cursor:pointer" onclick="openCalendarInStudioById('${esc(String(x.id||x.id_||''))}')">${x.Signature?'⭐ ':''}<b>${esc(x.Titre)}</b>${esc(x.Public_cible||'')} · ${esc(x.Format||'')}</div>`).join('')}</div>`}
- $('#cal').innerHTML=h;$('#kMonth').textContent=monthEvents().length;
+ for(let d=1;d<=days;d++){
+   const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+   const ev=monthEvents().filter(x=>dateVal(x.Date_publication)?.getDate()===d);
+   h+=`<div class="day" onclick="openEvent('${ds}')"><div class="num">${d}</div>${
+     ev.map(x=>{
+       const kind=cp37Kind(x);
+       const sug=/suggest/i.test(String(x.Statut||x.Origine||''));
+       return `<div class="event cp37-${kind} ${sug?'cp37-suggest':''}" style="cursor:pointer" onclick="event.stopPropagation();openCalendarInStudioById('${esc(String(x.id||x.id_||''))}')">${x.Signature?'⭐ ':''}<b>${esc(x.Titre||'À préparer')}</b>${esc(x.Public_cible||'')} · ${esc(x.Format||'')}</div>`;
+     }).join('')
+   }</div>`;
+ }
+ $('#cal').innerHTML=h;
+ $('#kMonth').textContent=monthEvents().length;
 }
 function shiftMonth(n){viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()+n,1);renderCalendar()}
 function renderForms(){
@@ -477,15 +497,74 @@ async function generateMonth(){
  if(!actions.length)return alert('Le mois contient déjà suffisamment de propositions.');
  try{await grist.docApi.applyUserActions(actions);D.CALENDRIER=rows(await grist.docApi.fetchTable(T.CALENDRIER));renderCalendar();$('#calNotice').innerHTML=`<div class="notice ok">✓ ${actions.length} propositions ajoutées au calendrier Grist.</div>`}catch(e){alert('Impossible d’écrire dans CALENDRIER. Vérifiez que le widget a bien Accès complet au document.');console.error(e)}
 }
-function openEvent(){
- $('#modalTitle').textContent='Ajouter au calendrier';$('#modalBody').innerHTML=`<label>Date</label><input id="eDate" type="date"><label>Titre</label><input id="eTitle"><label>Formation</label><select id="eForm">${(D.FORMATIONS||[]).map(x=>`<option>${esc(x.Intitule)}</option>`).join('')}</select><label>Public</label><select id="eTarget"><option>Jeunes</option><option>Parents</option><option>Entreprises</option><option>Professionnels</option><option>Prescripteurs / partenaires</option></select><label>Format</label><select id="eFormat"><option>Reel</option><option>Carrousel</option><option>Interview</option><option>Photo + texte</option><option>Quiz</option></select>`;$('#modalSave').onclick=saveEvent;$('#modal').classList.add('show')
+function openEvent(prefillDate=''){
+ $('#modalTitle').textContent='Ajouter au calendrier';
+ $('#modalBody').innerHTML=`
+   <label>Date</label><input id="eDate" type="date" value="${esc(prefillDate||'')}">
+   <label>Type</label><select id="eType">
+     <option>Formation longue</option><option>Formation courte</option>
+     <option>Événement / forum / JPO</option><option>Actualité du centre</option>
+     <option>Idée de publication</option><option>Autre contenu</option>
+   </select>
+   <label>Titre / sujet</label><input id="eTitle" placeholder="Ex. Forum de l’orientation à Rodez">
+   <label>Formation liée (facultatif)</label><select id="eForm"><option value="">Aucune</option>${(D.FORMATIONS||[]).map(x=>`<option>${esc(x.Intitule)}</option>`).join('')}</select>
+   <label>Public</label><select id="eTarget"><option>Jeunes</option><option>Parents</option><option>Entreprises</option><option>Professionnels</option><option>Prescripteurs / partenaires</option><option>Tous publics</option></select>
+   <label>Format</label><select id="eFormat"><option value="">À définir</option><option>Reel</option><option>Carrousel</option><option>Interview</option><option>Photo + texte</option><option>Quiz</option><option>Story</option></select>
+   <label>Statut</label><select id="eStatus"><option>À préparer</option><option>Suggestion collègue</option><option>Validé</option></select>
+   <label>Informations à intégrer</label><textarea id="eInfo" placeholder="Lieu, horaires, ce qui s’est passé, photos/vidéos disponibles…"></textarea>
+   <div class="cp37-note"><b>IA facultative :</b> vous pouvez enregistrer uniquement dans le calendrier ou enregistrer puis préparer la publication dans le Studio IA.</div>
+   <div class="cp37-choice">
+     <button class="btn alt" type="button" onclick="saveEvent(false)">💾 Ajouter au calendrier</button>
+     <button class="btn" type="button" onclick="saveEvent(true)">✨ Ajouter + ouvrir l’IA</button>
+   </div>`;
+ $('#modalSave').style.display='none';
+ $('#modal').classList.add('show');
 }
-async function saveEvent(){
- const vals={Date_publication:$('#eDate').value,Titre:$('#eTitle').value,Formation:$('#eForm').value,Public_cible:$('#eTarget').value,Format:$('#eFormat').value,Statut:'À préparer',Origine:'Manuel COM’PLICE'};
+async function saveEvent(openAI=false){
+ const vals={
+   Date_publication:$('#eDate').value,
+   Titre:$('#eTitle').value.trim(),
+   Univers:$('#eType').value,
+   Formation:$('#eForm').value,
+   Public_cible:$('#eTarget').value,
+   Format:$('#eFormat').value,
+   Objectif:'',
+   Statut:$('#eStatus').value,
+   Angle_marketing:$('#eInfo').value,
+   Pourquoi_maintenant:'',
+   A_prevoir:'',
+   Signature:false,
+   Origine:$('#eStatus').value==='Suggestion collègue'?'Suggestion collègue':'Manuel COM’PLICE'
+ };
  if(!vals.Date_publication||!vals.Titre)return alert('Date et titre sont obligatoires.');
- await grist.docApi.applyUserActions([['AddRecord',T.CALENDRIER,null,vals]]);D.CALENDRIER=rows(await grist.docApi.fetchTable(T.CALENDRIER));closeModal();renderCalendar();
+ try{
+   await grist.docApi.applyUserActions([['AddRecord',T.CALENDRIER,null,vals]]);
+   D.CALENDRIER=rows(await grist.docApi.fetchTable(T.CALENDRIER));
+   closeModal();
+   $('#modalSave').style.display='';
+   renderCalendar();
+   if(openAI){
+     go('studio');
+     const universe=$('#aiUniverse');
+     if(universe){
+       if(vals.Univers==='Formation longue')universe.value='Formation longue';
+       else if(vals.Univers==='Formation courte')universe.value='Formation courte';
+       else universe.value='Vie du centre';
+       fillAiForms();
+     }
+     const form=$('#aiForm');
+     if(form&&vals.Formation){const opt=[...form.options].find(o=>o.value===vals.Formation||o.textContent===vals.Formation);if(opt)form.value=opt.value}
+     const target=$('#aiTarget');
+     if(target){const opt=[...target.options].find(o=>o.value===vals.Public_cible);if(opt)target.value=opt.value}
+     const facts=$('#aiFacts');
+     if(facts)facts.value=[`Sujet : ${vals.Titre}`,`Date prévue : ${vals.Date_publication}`,vals.Angle_marketing?`Informations : ${vals.Angle_marketing}`:''].filter(Boolean).join('\\n');
+   }
+ }catch(e){
+   console.error(e);
+   alert("Impossible d'ajouter au calendrier. Vérifiez l'accès complet du widget Grist.");
+ }
 }
-function openSource(){
+function openSource(){ $('#modalSave').style.display='';
  $('#modalTitle').textContent='Ajouter une information';$('#modalBody').innerHTML=`<label>Titre</label><input id="sTitle"><label>Type</label><select id="sType"><option>Nouvelle information</option><option>Fiche produit</option><option>Calendrier</option><option>Événement</option></select><label>Informations factuelles</label><textarea id="sInfo"></textarea>`;$('#modalSave').onclick=saveSource;$('#modal').classList.add('show')
 }
 async function saveSource(){
@@ -867,64 +946,5 @@ document.addEventListener('click',function(e){
 <script>
 const _cpOldRenderCalendar=renderCalendar;
 renderCalendar=function(){const r=_cpOldRenderCalendar.apply(this,arguments);setTimeout(bindCalendarDayClicks,0);return r;};
-</script>
-
-<div id="cp36Modal" class="cp-modal">
- <div class="cp-modal-box">
-  <div class="cp-modal-head"><div><h3>Ajouter au calendrier</h3><div id="cp36DateText" class="muted"></div></div><button class="cp-x" type="button" onclick="cp36Close()">×</button></div>
-  <div class="cp-form">
-   <label>Date<input id="cp36Date" type="date"></label>
-   <label>Type<select id="cp36Type"><option>Formation longue</option><option>Formation courte</option><option>Événement / forum / JPO</option><option>Actualité du centre</option><option>Idée de publication</option><option>Autre communication</option></select></label>
-   <label class="full">Sujet / titre<input id="cp36Title" placeholder="Ex. Forum de l’orientation"></label>
-   <label>Public<select id="cp36Public"><option value="">À définir</option><option>Jeunes</option><option>Parents</option><option>Entreprises</option><option>Professionnels</option><option>Partenaires / prescripteurs</option></select></label>
-   <label>Statut<select id="cp36Status"><option>À préparer</option><option>Suggestion collègue</option><option>Validé</option></select></label>
-   <label class="full">Informations à intégrer<textarea id="cp36Info" placeholder="Informations réelles, lieu, photos, vidéo, intervenants…"></textarea></label>
-  </div>
-  <div class="cp36-ai"><b>IA facultative :</b> vous choisissez soit d’ajouter uniquement au calendrier, soit d’envoyer ensuite cet élément au Studio IA.</div>
-  <div class="cp36-buttons"><button class="btn alt" type="button" onclick="cp36Save(false)">💾 Ajouter au calendrier</button><button class="btn" type="button" onclick="cp36Save(true)">✨ Ajouter puis ouvrir l’IA</button></div>
-  <div id="cp36Msg" class="cp-msg"></div>
- </div>
-</div>
-
-<script>
-/* V36 CALENDAR-ONLY JS — no replacement of app functions */
-let cp36Cursor=new Date(); cp36Cursor.setDate(1); cp36Cursor.setHours(0,0,0,0);
-function cp36Data(){try{return (typeof rows==='function'?rows('CALENDRIER'):[])||[]}catch(e){return []}}
-function cp36D(x){try{return dateVal(val(x,'Date_publication')||val(x,'Date'))}catch(e){return null}}
-function cp36K(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
-function cp36Kind(x){let h='';try{h=[val(x,'Univers'),val(x,'Type'),val(x,'Categorie'),val(x,'Formation'),val(x,'Titre')].filter(Boolean).join(' ').toLowerCase()}catch(e){};if(/forum|salon|jpo|portes ouvertes|événement|evenement|job dating/.test(h))return'event';if(/courte/.test(h))return'short';if(/longue|capa|bac pro|btsa|licence|apprentissage/.test(h))return'long';return'other'}
-function cp36Esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function cp36Render(){
- const host=document.getElementById('cp36Calendar');if(!host)return;
- const y=cp36Cursor.getFullYear(),m=cp36Cursor.getMonth(),by={};cp36Data().forEach((x,i)=>{const d=cp36D(x);if(d)(by[cp36K(d)]||(by[cp36K(d)]=[])).push({x,i})});
- document.getElementById('cp36Month').textContent=cp36Cursor.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
- const first=new Date(y,m,1),shift=(first.getDay()+6)%7,start=new Date(y,m,1-shift),today=cp36K(new Date());
- let h=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map(n=>`<div class="cp36-dow">${n}</div>`).join('');
- for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);const k=cp36K(d),items=by[k]||[];
- h+=`<div class="cp36-day ${d.getMonth()!=m?'off':''} ${k==today?'today':''}" onclick="cp36OpenAdd('${k}')"><div class="cp36-num">${d.getDate()}</div>${items.length?items.map(o=>{let st='';try{st=val(o.x,'Statut')||''}catch(e){};let title='À préparer';try{title=val(o.x,'Titre')||title}catch(e){};return `<button class="cp36-evt ${cp36Kind(o.x)} ${/suggest/i.test(st)?'suggest':''}" onclick="event.stopPropagation();cp36ToAI(${o.i})"><b>${cp36Esc(title)}</b><small>${cp36Esc(st)}</small></button>`}).join(''):'<div class="cp36-empty">＋ ajouter</div>'}</div>`}
- host.innerHTML=h
-}
-window.cp36Move=n=>{cp36Cursor.setMonth(cp36Cursor.getMonth()+n);cp36Render()}
-window.cp36Today=()=>{cp36Cursor=new Date();cp36Cursor.setDate(1);cp36Render()}
-window.cp36OpenAdd=function(ds=''){const m=document.getElementById('cp36Modal');if(!m)return;const d=ds||cp36K(new Date());document.getElementById('cp36Date').value=d;document.getElementById('cp36DateText').textContent='Date : '+d.split('-').reverse().join('/');document.getElementById('cp36Msg').textContent='';m.classList.add('open')}
-window.cp36Close=()=>document.getElementById('cp36Modal')?.classList.remove('open')
-function cp36ToAI(i){const x=cp36Data()[i];if(!x)return;try{openWeekItem(i)}catch(e){try{showPage('studio')}catch(_){};const f=document.getElementById('aiFacts');if(f)f.value=[`Sujet : ${val(x,'Titre')||''}`,`Date : ${val(x,'Date_publication')||''}`,val(x,'Angle_marketing')||''].filter(Boolean).join('\n')}}
-window.cp36Save=async function(ai){
- const date=document.getElementById('cp36Date').value,title=document.getElementById('cp36Title').value.trim(),msg=document.getElementById('cp36Msg');
- if(!date||!title){msg.textContent='Complétez la date et le titre.';return}
- const rec={Date_publication:date,Titre:title,Univers:document.getElementById('cp36Type').value,Formation:'',Public_cible:document.getElementById('cp36Public').value,Format:'',Objectif:'',Statut:document.getElementById('cp36Status').value,Angle_marketing:document.getElementById('cp36Info').value,Pourquoi_maintenant:'',A_prevoir:'',Signature:false,Origine:document.getElementById('cp36Status').value==='Suggestion collègue'?'Suggestion collègue':'Calendrier COM’PLICE'};
- msg.textContent='Enregistrement…';
- try{
-   let tableName=null;
-   if(typeof tableMap!=='undefined')tableName=tableMap.CALENDRIER;
-   if(!tableName && typeof T!=='undefined')tableName=T.CALENDRIER;
-   if(!tableName)throw new Error('table CALENDRIER non détectée');
-   await grist.docApi.applyUserActions([['AddRecord',tableName,null,rec]]);
-   msg.textContent='✓ Ajouté au calendrier.';
-   setTimeout(()=>{cp36Close();location.reload()},500);
-   if(ai){sessionStorage.setItem('cp36_ai_pending',JSON.stringify(rec))}
- }catch(e){msg.textContent='Ajout impossible : '+(e.message||e)}
-}
-setTimeout(()=>{cp36Render();const p=sessionStorage.getItem('cp36_ai_pending');if(p){sessionStorage.removeItem('cp36_ai_pending');try{const r=JSON.parse(p);showPage('studio');const f=document.getElementById('aiFacts');if(f)f.value=[`Sujet : ${r.Titre}`,`Date : ${r.Date_publication}`,r.Angle_marketing||''].filter(Boolean).join('\n')}catch(e){}}},900);
 </script>
 </body></html>
